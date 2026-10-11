@@ -1,5 +1,10 @@
 # Changelog
 
+## <small>0.19.99 (2026-10-11)</small>
+
+* chore(brand): refresh Bitsocial logo colors ([ea26887](https://github.com/bitsocialnet/bitsocial-cli/commit/ea26887))
+* chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.103 and kubo to 0.43.1 ([92a513d](https://github.com/bitsocialnet/bitsocial-cli/commit/92a513d)), closes [ipfs/kubo#11447](https://github.com/ipfs/kubo/issues/11447)
+
 ## <small>0.19.98 (2026-09-16)</small>
 
 * docs: point the community edit web UI hint at bitsocial.net/projects ([cb36821](https://github.com/bitsocialnet/bitsocial-cli/commit/cb36821))
