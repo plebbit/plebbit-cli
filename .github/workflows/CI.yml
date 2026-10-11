@@ -54,8 +54,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: docker build --target deps -t bitsocial-cli:deps-smoke .
 
-      # Retry: the kubo postinstall downloads its binary from dist.ipfs.tech,
-      # which intermittently returns 5xx and aborts the install with no retry
+      # Retry: the kubo postinstall downloads its binary from GitHub releases
+      # (kubo >= 0.43.0; it used dist.ipfs.tech before, which went down for good
+      # in 2026-10). A transient download failure aborts the install with no retry
       # of its own (issue #110). This affects every install step, not just the
       # global install below.
       - name: npm ci (with retry)
@@ -100,9 +101,9 @@ jobs:
         run: |
           echo "npm global prefix: $(npm config get prefix)"
           TARBALL=$(npm pack | tail -1)
-          # Retry: the kubo postinstall downloads its binary from dist.ipfs.tech,
-          # which intermittently returns 5xx and aborts the install with no retry
-          # of its own (issue #110).
+          # Retry: the kubo postinstall downloads its binary from GitHub releases;
+          # a transient download failure aborts the install with no retry of its
+          # own (issue #110).
           # --prefer-offline reuses the cache primed by `npm ci` above. Note it
           # is not what makes this step fast - see #136; the destination volume
           # is. Kept because reusing the cache is still the right default.
