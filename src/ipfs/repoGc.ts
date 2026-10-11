@@ -30,7 +30,9 @@ function toConnectableApiBase(kuboApiUrl: URL | string): string {
  * context, but the shutdown command only calls `nd.Close()`, which cancels the node context — so
  * `gcErrc` never closes and `daemonFunc` blocks forever draining it. Reproduces on 0.24.0, 0.42.0
  * and 0.43.0, which is also why the earlier attempt at the flag (f228d7d, Dec 2023, kubo ~0.24)
- * was reverted two days later. Do not add `--enable-gc` back without re-testing that path.
+ * was reverted two days later. Fixed upstream in kubo 0.43.1 (ipfs/kubo#11447), but driving GC
+ * over RPC keeps working on every version and needs no daemon flag, so there is no reason to
+ * switch back. Do not add `--enable-gc` back without re-testing that path on the pinned kubo.
  */
 export async function runRepoGc(options: {
     kuboApiUrl: URL | string;
