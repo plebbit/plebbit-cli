@@ -3,8 +3,7 @@ import { BaseCommand } from "../../base-command.js";
 import { Args } from "@oclif/core";
 
 export default class Stop extends BaseCommand {
-    static override description =
-        "Stop a community. The community will not publish or receive any publications until it is started again.";
+    static override description = "Stop a community. The community will not publish or receive any publications until it is started again.";
 
     static override strict = false; // To allow for variable length arguments
 
@@ -34,7 +33,17 @@ export default class Stop extends BaseCommand {
         for (const address of addresses) {
             try {
                 const community = await pkc.createCommunity({ address });
-                await community.stop();
+                // `community.started` comes from the daemon's record (it is what `community list`
+                // prints). A fresh RPC instance is never in client state "started" itself, and
+                // pkc-js's RpcLocalCommunity.stop() only sends the stopCommunity RPC for an instance
+                // that is, so calling stop() directly here returned without contacting the daemon
+                // (issue #152). Attach to the running community first: the RPC server resolves
+                // startCommunity for an already-running address to its live instance, which puts
+                // this instance into state "started" so stop() really sends the RPC.
+                if (community.started) {
+                    await community.start();
+                    await community.stop();
+                }
                 this.log(address);
             } catch (e) {
                 const error = e instanceof Error ? e : new Error(typeof e === "string" ? e : JSON.stringify(e));
