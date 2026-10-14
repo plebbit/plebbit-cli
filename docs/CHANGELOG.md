@@ -1,5 +1,10 @@
 # Changelog
 
+## <small>0.19.102 (2026-10-14)</small>
+
+* fix(community): stop a community the daemon is running in `community stop` ([d679efb](https://github.com/bitsocialnet/bitsocial-cli/commit/d679efb)), closes [#153](https://github.com/bitsocialnet/bitsocial-cli/issues/153)
+* test(community): reproduce `community stop` leaving a daemon-started community running ([2e29b6a](https://github.com/bitsocialnet/bitsocial-cli/commit/2e29b6a))
+
 ## <small>0.19.101 (2026-10-14)</small>
 
 * chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.105 ([d359769](https://github.com/bitsocialnet/bitsocial-cli/commit/d359769))
