@@ -6,10 +6,13 @@
         "tagAnnotation": "v${version}",
         "tagName": "v${version}"
     },
-    "npm": { "publish": false },
+    "npm": {
+        "publish": false
+    },
     "github": {
         "release": true,
-        "releaseName": "v${version}"
+        "releaseName": "v${version}",
+        "releaseNotes": "node --no-warnings --loader ts-node/esm ci-bin/pkc-js-changelog.ts release-notes"
     },
     "plugins": {
         "@release-it/conventional-changelog": {
@@ -17,17 +20,33 @@
                 "name": "conventionalcommits",
                 "preMajor": true,
                 "types": [
-                    { "type": "feat", "section": "Features" },
-                    { "type": "fix", "section": "Bug Fixes" },
-                    { "type": "perf", "section": "Performance Improvements" },
-                    { "type": "revert", "section": "Reverts" },
-                    { "type": "build", "section": "Build System" }
+                    {
+                        "type": "feat",
+                        "section": "Features"
+                    },
+                    {
+                        "type": "fix",
+                        "section": "Bug Fixes"
+                    },
+                    {
+                        "type": "perf",
+                        "section": "Performance Improvements"
+                    },
+                    {
+                        "type": "revert",
+                        "section": "Reverts"
+                    },
+                    {
+                        "type": "build",
+                        "section": "Build System"
+                    }
                 ]
             },
             "infile": "docs/CHANGELOG.md"
         }
     },
     "hooks": {
+        "after:@release-it/conventional-changelog:beforeRelease": "node --no-warnings --loader ts-node/esm ci-bin/pkc-js-changelog.ts enrich --previous-tag v${latestVersion}",
         "before:git:release": "npx oclif manifest && npm run generate:readme && git add docs/CHANGELOG.md README.md package.json package-lock.json && git commit -m 'chore(release): ${version} [skip ci]'"
     }
 }
