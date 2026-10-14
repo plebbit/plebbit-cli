@@ -185,16 +185,18 @@ export async function ensureNpmAvailable(): Promise<void> {
 
 export async function runNpmPack(packageSpec: string, destDir: string): Promise<string> {
     const npmCliPath = await getNpmCliPath();
-    return new Promise<string>((resolve, reject) => {
-        const proc = spawn(process.execPath, [npmCliPath, "pack", packageSpec, "--pack-destination", destDir], {
-            stdio: ["ignore", "pipe", "pipe"],
+    // Pack into a fresh directory and locate the tarball on disk instead of parsing npm's stdout.
+    // npm pack runs the package's lifecycle scripts (e.g. `prepare`) with inherited stdio, so
+    // anything they print lands on the same stream as the filename. husky 9's `prepare` prints
+    // ".git can't be found" without a trailing newline, which turned the last line into
+    // ".git can't be found<name>.tgz".
+    const packDir = await fs.mkdtemp(path.join(destDir, "npm-pack-"));
+    await new Promise<void>((resolve, reject) => {
+        const proc = spawn(process.execPath, [npmCliPath, "pack", packageSpec, "--pack-destination", packDir], {
+            stdio: ["ignore", "ignore", "pipe"],
             env: getNpmEnv()
         });
-        let stdout = "";
         let stderr = "";
-        proc.stdout.on("data", (data: Buffer) => {
-            stdout += data.toString();
-        });
         proc.stderr.on("data", (data: Buffer) => {
             stderr += data.toString();
         });
@@ -202,19 +204,18 @@ export async function runNpmPack(packageSpec: string, destDir: string): Promise<
             reject(new Error(`Failed to run npm pack: ${err.message}`));
         });
         proc.on("close", (code) => {
-            if (code === 0) {
-                // npm pack prints the tarball filename on the last non-empty line of stdout
-                const filename = stdout.trim().split("\n").pop()?.trim();
-                if (!filename) {
-                    reject(new Error("npm pack succeeded but produced no output"));
-                    return;
-                }
-                resolve(path.join(destDir, filename));
-            } else {
-                reject(new Error(`npm pack exited with code ${code}: ${stderr.trim()}`));
-            }
+            if (code === 0) resolve();
+            else reject(new Error(`npm pack exited with code ${code}: ${stderr.trim()}`));
         });
     });
+    const tarballs = (await fs.readdir(packDir)).filter((name) => name.endsWith(".tgz"));
+    if (tarballs.length !== 1) {
+        throw new Error(`npm pack succeeded but left ${tarballs.length} tarballs in ${packDir}: ${tarballs.join(", ")}`);
+    }
+    const tarballPath = path.join(destDir, tarballs[0]);
+    await fs.rename(path.join(packDir, tarballs[0]), tarballPath);
+    await fs.rm(packDir, { recursive: true, force: true });
+    return tarballPath;
 }
 
 export async function runNpmInstall(challengeDir: string): Promise<void> {
