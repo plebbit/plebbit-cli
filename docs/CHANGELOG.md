@@ -1,5 +1,12 @@
 # Changelog
 
+## <small>0.19.103 (2026-10-14)</small>
+
+* docs(changelog): backfill pkc-js changes under every past pkc-js upgrade ([1b31f86](https://github.com/bitsocialnet/bitsocial-cli/commit/1b31f86))
+* docs(changelog): list the pkc-js 0.0.104 and 0.0.105 changes under the 0.19.101 upgrade ([8f7b3ed](https://github.com/bitsocialnet/bitsocial-cli/commit/8f7b3ed))
+* fix(release): attach pkc-js changes to the upgrade bullet, not any bullet mentioning pkc-js ([2a87cfe](https://github.com/bitsocialnet/bitsocial-cli/commit/2a87cfe))
+* feat(release): nest the pkc-js changelog under pkc-js upgrade bullets in release notes ([8917c0f](https://github.com/bitsocialnet/bitsocial-cli/commit/8917c0f))
+
 ## <small>0.19.102 (2026-10-14)</small>
 
 * fix(community): stop a community the daemon is running in `community stop` ([d679efb](https://github.com/bitsocialnet/bitsocial-cli/commit/d679efb)), closes [#153](https://github.com/bitsocialnet/bitsocial-cli/issues/153)
