@@ -4,9 +4,9 @@ import path from "node:path";
 import { describe, it, expect } from "vitest";
 import { directory as randomDirectory } from "tempy";
 
-// `prepare` runs `husky install`, which writes .husky/_/husky.sh. core.hooksPath lives in the
-// shared repo config, so a checkout that skips the install still runs .husky/commit-msg and every
-// commit fails sourcing the missing husky.sh. In a linked worktree .git is a file (issue #150).
+// `prepare` runs husky, which sets core.hooksPath to .husky/_ and writes the hook runner there. The old
+// script was guarded with `test -d .git`, which is false in a linked worktree where .git is a file, so
+// hooks were never installed there and every commit failed (issue #150).
 const prepareScript: string = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf-8")).scripts.prepare;
 
 // Every git invocation below, and husky itself, must only ever see the temp repo. GIT_DIR, GIT_WORK_TREE,
@@ -18,11 +18,11 @@ env.PATH = `${path.join(process.cwd(), "node_modules", ".bin")}${path.delimiter}
 env.GIT_CONFIG_GLOBAL = "/dev/null";
 env.GIT_CONFIG_NOSYSTEM = "1";
 
-const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, env, stdio: "pipe" });
+const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, env, stdio: "pipe", encoding: "utf-8" });
 
 const runPrepare = (cwd: string) => spawnSync("sh", ["-c", prepareScript], { cwd, env, encoding: "utf-8" });
 
-// npm runs scripts through cmd.exe on Windows, where `test` is not a builtin.
+// The script is run through sh, which is not available on Windows.
 describe.skipIf(process.platform === "win32")("npm prepare script", () => {
     const setupRepo = () => {
         const root = randomDirectory();
@@ -39,7 +39,19 @@ describe.skipIf(process.platform === "win32")("npm prepare script", () => {
         const { root, main } = setupRepo();
         try {
             expect(runPrepare(main).status).toBe(0);
-            expect(fs.existsSync(path.join(main, ".husky", "_", "husky.sh"))).toBe(true);
+            expect(git(main, "config", "core.hooksPath").trim()).toBe(".husky/_");
+            expect(fs.existsSync(path.join(main, ".husky", "_", "h"))).toBe(true);
+        } finally {
+            fs.rmSync(root, { recursive: true, force: true });
+        }
+    });
+
+    // Registry and tarball installs, and the Docker build, have no .git; husky must not fail the install.
+    it("exits 0 outside a git repository", () => {
+        const root = randomDirectory();
+        try {
+            expect(runPrepare(root).status).toBe(0);
+            expect(fs.existsSync(path.join(root, ".husky"))).toBe(false);
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }
@@ -50,7 +62,8 @@ describe.skipIf(process.platform === "win32")("npm prepare script", () => {
         try {
             expect(fs.statSync(path.join(worktree, ".git")).isFile()).toBe(true);
             expect(runPrepare(worktree).status).toBe(0);
-            expect(fs.existsSync(path.join(worktree, ".husky", "_", "husky.sh"))).toBe(true);
+            expect(git(worktree, "config", "core.hooksPath").trim()).toBe(".husky/_");
+            expect(fs.existsSync(path.join(worktree, ".husky", "_", "h"))).toBe(true);
         } finally {
             fs.rmSync(root, { recursive: true, force: true });
         }
