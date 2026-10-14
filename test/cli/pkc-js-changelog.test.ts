@@ -89,6 +89,35 @@ describe("pkc-js changelog in release notes", () => {
         expect(insertPkcJsReleases(once, releases, { from: "0.0.103", to: "0.0.105" })).toBe(once);
     });
 
+    it("attaches to the upgrade bullet, not to another bullet that merely mentions pkc-js", () => {
+        const changelog = `# Changelog
+
+## <small>0.19.72 (2026-06-12)</small>
+
+* test: absorb pkc-js 0.0.46+ kubo restart and async edit visibility (issue #91) ([1849ff8](https://github.com/bitsocialnet/bitsocial-cli/commit/1849ff8))
+* chore(deps): upgrade @pkcprotocol/pkc-js 0.0.45 -> 0.0.47 (issue #91) ([555cdde](https://github.com/bitsocialnet/bitsocial-cli/commit/555cdde))
+
+## <small>0.19.71 (2026-06-09)</small>
+`;
+        const releases = [{ version: "0.0.47", date: "2026-06-12", entries: [{ type: "fix", text: "something" }] }];
+        const lines = insertPkcJsReleases(changelog, releases, { from: "0.0.45", to: "0.0.47" }).split("\n");
+        expect(lines[5]).toMatch(/^\* chore\(deps\): upgrade @pkcprotocol\/pkc-js 0\.0\.45 -> 0\.0\.47/);
+        expect(lines[6]).toMatch(/^  \* pkc-js \[0\.0\.47\]/);
+        expect(lines[7]).toBe("    * fix: something");
+
+        // An upgrade bullet that does not name the version still wins over an unrelated mention.
+        const withoutVersion = changelog.replace("upgrade @pkcprotocol/pkc-js 0.0.45 -> 0.0.47", "upgrade pkc-js to latest");
+        const lines2 = insertPkcJsReleases(withoutVersion, releases, { from: "0.0.45", to: "0.0.47" }).split("\n");
+        expect(lines2[5]).toMatch(/^\* chore\(deps\): upgrade pkc-js to latest/);
+        expect(lines2[6]).toMatch(/^  \* pkc-js \[0\.0\.47\]/);
+
+        // With only an unrelated mention, a new upgrade bullet is added instead.
+        const onlyMention = changelog.replace(/^\* chore\(deps\).*\n/m, "");
+        const lines3 = insertPkcJsReleases(onlyMention, releases, { from: "0.0.45", to: "0.0.47" }).split("\n");
+        expect(lines3[5]).toBe("* chore(deps): upgrade @pkcprotocol/pkc-js from 0.0.45 to 0.0.47");
+        expect(lines3[6]).toMatch(/^  \* pkc-js \[0\.0\.47\]/);
+    });
+
     it("adds an upgrade bullet when the newest section has none", () => {
         const withoutBullet = bitsocialChangelog.replace(/^\* chore\(deps\): upgrade @pkcprotocol\/pkc-js to 0\.0\.105.*\n/m, "");
         const releases = releasesInRange(parsePkcJsChangelog(pkcJsChangelog), "0.0.104", "0.0.105");

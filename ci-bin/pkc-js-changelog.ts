@@ -141,6 +141,21 @@ export const newestSection = (changelog: string): string => {
     return lines.slice(bounds.start, bounds.end).join("\n").trim();
 };
 
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * The top-level bullet that records the pkc-js upgrade: preferably one naming pkc-js together with the new
+ * version, else one that reads as an upgrade/bump of pkc-js. A bullet that merely mentions pkc-js (a test or
+ * a fix adapting to it) does not count, so the sub-list is not attached to the wrong commit.
+ */
+const findUpgradeBullet = (section: string[], to: string): number => {
+    const mentionsPkcJs = (line: string) => /^\* .*pkc-js/i.test(line);
+    const namesVersion = new RegExp(`(^|[^0-9.])${escapeRegExp(to)}([^0-9]|$)`);
+    const byVersion = section.findIndex((line) => mentionsPkcJs(line) && namesVersion.test(line));
+    if (byVersion !== -1) return byVersion;
+    return section.findIndex((line) => mentionsPkcJs(line) && /\b(upgrade|bump|update)s?\b/i.test(line));
+};
+
 export interface InsertOptions {
     from: string;
     to: string;
@@ -157,11 +172,11 @@ export const insertPkcJsReleases = (changelog: string, releases: PkcJsRelease[],
     if (!bounds) return changelog;
     const section = lines.slice(bounds.start, bounds.end);
 
-    const alreadyListed = new RegExp(`^\\s+\\* ${pkcJsVersionBullet(to).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+    const alreadyListed = new RegExp(`^\\s+\\* ${escapeRegExp(pkcJsVersionBullet(to))}`);
     if (section.some((line) => alreadyListed.test(line))) return changelog;
 
     const block = renderPkcJsReleases(releases);
-    const bulletIndex = section.findIndex((line) => /^\* .*pkc-js/i.test(line));
+    const bulletIndex = findUpgradeBullet(section, to);
     if (bulletIndex !== -1) {
         // Skip continuation lines (indented) that already belong to the bullet.
         let insertAt = bulletIndex + 1;
