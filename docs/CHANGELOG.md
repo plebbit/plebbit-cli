@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.19.101 (2026-10-14)</small>
+
+* chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.105 ([d359769](https://github.com/bitsocialnet/bitsocial-cli/commit/d359769))
+
 ## <small>0.19.100 (2026-10-14)</small>
 
 * chore(deps): upgrade husky to 9.1.7 ([b8feb2f](https://github.com/bitsocialnet/bitsocial-cli/commit/b8feb2f))
