@@ -9,14 +9,18 @@ import { directory as randomDirectory } from "tempy";
 // commit fails sourcing the missing husky.sh. In a linked worktree .git is a file (issue #150).
 const prepareScript: string = JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf-8")).scripts.prepare;
 
-const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" });
+// Every git invocation below, and husky itself, must only ever see the temp repo. GIT_DIR, GIT_WORK_TREE,
+// GIT_INDEX_FILE etc. override the cwd and would point `git init`/`git commit` at the developer's real repo
+// (e.g. when the suite runs from a git hook), and the global/system config can inject init.templateDir
+// hooks, commit.gpgsign (blocks on pinentry) or core.hooksPath into the temp repo.
+const env: NodeJS.ProcessEnv = Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith("GIT_") && key !== "HUSKY"));
+env.PATH = `${path.join(process.cwd(), "node_modules", ".bin")}${path.delimiter}${process.env.PATH}`;
+env.GIT_CONFIG_GLOBAL = "/dev/null";
+env.GIT_CONFIG_NOSYSTEM = "1";
 
-const runPrepare = (cwd: string) => {
-    const env: NodeJS.ProcessEnv = { ...process.env, PATH: `${path.join(process.cwd(), "node_modules", ".bin")}${path.delimiter}${process.env.PATH}` };
-    delete env.HUSKY;
-    delete env.GIT_DIR;
-    return spawnSync("sh", ["-c", prepareScript], { cwd, env, encoding: "utf-8" });
-};
+const git = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, env, stdio: "pipe" });
+
+const runPrepare = (cwd: string) => spawnSync("sh", ["-c", prepareScript], { cwd, env, encoding: "utf-8" });
 
 // npm runs scripts through cmd.exe on Windows, where `test` is not a builtin.
 describe.skipIf(process.platform === "win32")("npm prepare script", () => {
