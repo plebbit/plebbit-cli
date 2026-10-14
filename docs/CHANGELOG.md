@@ -1,5 +1,12 @@
 # Changelog
 
+## <small>0.19.100 (2026-10-14)</small>
+
+* chore(deps): upgrade husky to 9.1.7 ([b8feb2f](https://github.com/bitsocialnet/bitsocial-cli/commit/b8feb2f))
+* fix(challenge): locate the npm pack tarball on disk instead of parsing stdout ([cf61121](https://github.com/bitsocialnet/bitsocial-cli/commit/cf61121))
+* fix(prepare): install husky hooks in git worktrees ([31d33af](https://github.com/bitsocialnet/bitsocial-cli/commit/31d33af))
+* test(prepare): isolate the husky test from the developer's git environment ([49c8f99](https://github.com/bitsocialnet/bitsocial-cli/commit/49c8f99))
+
 ## <small>0.19.99 (2026-10-11)</small>
 
 * chore(brand): refresh Bitsocial logo colors ([ea26887](https://github.com/bitsocialnet/bitsocial-cli/commit/ea26887))
