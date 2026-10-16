@@ -1,5 +1,11 @@
 # Changelog
 
+## <small>0.19.104 (2026-10-16)</small>
+
+* chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.106 ([0b41c7c](https://github.com/bitsocialnet/bitsocial-cli/commit/0b41c7c))
+  * pkc-js [0.0.106](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.106) (2026-10-16)
+    * fix(community): reject publications it cannot store verbatim instead of freezing the board ([#387](https://github.com/pkcprotocol/pkc-js/issues/387)) ([#388](https://github.com/pkcprotocol/pkc-js/issues/388)) ([a679a36](https://github.com/pkcprotocol/pkc-js/commit/a679a36f0fb3f0012f9035c54c9cd55675ed8d49))
+
 ## <small>0.19.103 (2026-10-14)</small>
 
 * docs(changelog): backfill pkc-js changes under every past pkc-js upgrade ([1b31f86](https://github.com/bitsocialnet/bitsocial-cli/commit/1b31f86))
