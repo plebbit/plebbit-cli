@@ -796,6 +796,14 @@ describe(`bitsocial daemon webui`, async () => {
         expect(body.ok).toBe(true);
         expect(Array.isArray(body.challenges)).toBe(true);
     });
+
+    it(`POST /api/page-sorts/reload returns 200 for local connections`, async () => {
+        const res = await fetch(`http://localhost:${rpcPort}/api/page-sorts/reload`, { method: "POST" });
+        expect(res.status).toBe(200);
+        const body = (await res.json()) as { ok: boolean; pageSorts: string[] };
+        expect(body.ok).toBe(true);
+        expect(Array.isArray(body.pageSorts)).toBe(true);
+    });
 });
 
 describe("bitsocial daemon kills kubo on its own shutdown (no backup /shutdown call)", async () => {

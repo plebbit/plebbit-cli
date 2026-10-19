@@ -1,7 +1,8 @@
 import { Args, Flags } from "@oclif/core";
 import { BaseCommand } from "../../base-command.js";
 import defaults from "../../../common-utils/defaults.js";
-import { installPackage, InvalidPackageArchiveError, type InstallPackageResult } from "../../../common-utils/package-registry.js";
+import { validateChallengeFileFactory } from "@pkcprotocol/pkc-js/challenges";
+import { importPackageFactory, installPackage, InvalidPackageArchiveError, type InstallPackageResult } from "../../../common-utils/package-registry.js";
 import { CHALLENGE_PACKAGE_KIND, reloadChallengesInDaemon } from "../../../challenge-packages/challenge-utils.js";
 
 export default class Install extends BaseCommand {
@@ -38,7 +39,13 @@ export default class Install extends BaseCommand {
 
         let installed: InstallPackageResult;
         try {
-            installed = await installPackage(CHALLENGE_PACKAGE_KIND, { packageSpec: args.package, dataPath });
+            installed = await installPackage(CHALLENGE_PACKAGE_KIND, {
+                packageSpec: args.package,
+                dataPath,
+                // Refuse anything a community would reject (e.g. a page sort package) before it replaces an install
+                validate: async (pkgDir, pkg) =>
+                    void validateChallengeFileFactory(await importPackageFactory(CHALLENGE_PACKAGE_KIND, pkgDir, pkg), { name: pkg.name })
+            });
         } catch (err) {
             if (err instanceof InvalidPackageArchiveError) this.error(err.message);
             throw err;

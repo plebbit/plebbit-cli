@@ -218,6 +218,24 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
             }
         });
 
+        // Issue #171: the reload endpoint looped over the RPC server's private _onSettingsChange handlers, one of which
+        // stops and restarts every started community. A reload only needs to refresh the clients' settings.
+        it("a challenge reload does not restart a started community", { timeout: 60_000 }, async () => {
+            const startedStates: string[] = [];
+            const onStartedState = (state: string) => startedStates.push(state);
+            sub.on("startedstatechange", onStartedState);
+            try {
+                const reloadRes = await fetch(`http://localhost:${RPC_PORT}/api/challenges/reload`, { method: "POST" });
+                expect(reloadRes.status).toBe(200);
+                // A restart surfaces as "stopped" within a few seconds; give it time to happen
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+                expect(startedStates).not.toContain("stopped");
+                expect(sub.started).toBe(true);
+            } finally {
+                sub.removeListener("startedstatechange", onStartedState);
+            }
+        });
+
         it("daemon loads installed challenge on startup", () => {
             expect(daemonProcess?.capturedStdout).toContain("Loaded challenge packages: test-challenge@1.0.0");
         });
@@ -475,6 +493,47 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
                     /* ignore */
                 }
             }
+        });
+    });
+
+    // Issue #164: `page-sort install` on a running daemon registers the package, and the reload pushes the new
+    // settings.pageSorts to already-connected RPC clients, which otherwise reject an unknown name client-side
+    // (ERR_RPC_CLIENT_PAGE_SORT_NAME_NOT_AVAILABLE_ON_SERVER)
+    describe("page sort packages", () => {
+        it("page-sort install on a running daemon lets a connected client configure the sort", { timeout: 180_000 }, async () => {
+            const pageSortName = "test-integration-page-sort";
+            const srcDir = path.join(randomDirectory(), pageSortName);
+            await fsPromise.mkdir(srcDir, { recursive: true });
+            await fsPromise.writeFile(path.join(srcDir, "package.json"), JSON.stringify({ name: pageSortName, version: "1.0.0" }));
+            await fsPromise.writeFile(
+                path.join(srcDir, "index.js"),
+                "export default function () { return { sortName: 'integrationNewest', description: 'Newest first', score: ({ comment }) => comment.timestamp }; }\n"
+            );
+
+            const rpcClient = (pkc as any).clients.pkcRpcClients[rpcWsUrl];
+            expect(rpcClient.settings?.pageSorts?.[pageSortName]).toBeUndefined();
+
+            const installResult = await new Promise<{ stdout: string; exitCode: number | null }>((resolve) => {
+                const proc = spawn(
+                    "node",
+                    ["./bin/run", "page-sort", "install", srcDir, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl],
+                    { stdio: ["pipe", "pipe", "pipe"] }
+                );
+                let stdout = "";
+                proc.stdout.on("data", (data: Buffer) => (stdout += data.toString()));
+                proc.on("close", (exitCode) => resolve({ stdout, exitCode }));
+            });
+            expect(installResult.exitCode).toBe(0);
+            expect(installResult.stdout).toContain(`reloaded ${pageSortName}@1.0.0 in the daemon at ${rpcWsUrl}`);
+
+            expect(await waitForCondition(() => !!rpcClient.settings?.pageSorts?.[pageSortName], 20000, 200)).toBe(true);
+            expect(rpcClient.settings.pageSorts[pageSortName].sortName).toBe("integrationNewest");
+
+            const sub = await pkc.createCommunity();
+            const pages = { posts: [{ name: pageSortName, preloaded: true }] };
+            await sub.edit({ settings: { ...sub.settings, pages } });
+            expect(sub.settings?.pages).toEqual(pages);
+            expect(sub.pageSorts?.posts?.integrationNewest?.name).toBe(pageSortName);
         });
     });
 });

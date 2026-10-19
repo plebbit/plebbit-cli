@@ -18,6 +18,7 @@ import type { PKCLoggerType } from "../../util.js";
 import { startDaemonServer } from "../../webui/daemon-server.js";
 import { printBanner } from "../ascii-banner.js";
 import { loadChallengesIntoPKC, formatChallengeNameVersion } from "../../challenge-packages/challenge-utils.js";
+import { loadPageSortsIntoPKC } from "../../page-sort-packages/page-sort-utils.js";
 import { migrateDataDirectory } from "../../common-utils/data-migration.js";
 import { createBsoResolvers, DEFAULT_PROVIDERS } from "../../common-utils/resolvers.js";
 import { pruneStaleStates, writeDaemonState, deleteDaemonState, detectSelfSupervisor, DAEMON_SHUTDOWN_TIMEOUT_MS } from "../../common-utils/daemon-state.js";
@@ -528,6 +529,10 @@ export default class Daemon extends Command {
                 const loadedChallenges = await loadChallengesIntoPKC(mergedPkcOptions.dataPath);
                 if (loadedChallenges.length > 0)
                     console.log(`Loaded challenge packages: ${loadedChallenges.map(formatChallengeNameVersion).join(", ")}`);
+                // and page sort packages, so settings.pages can name them (issue #164)
+                const loadedPageSorts = await loadPageSortsIntoPKC(mergedPkcOptions.dataPath);
+                if (loadedPageSorts.length > 0)
+                    console.log(`Loaded page sort packages: ${loadedPageSorts.map(formatChallengeNameVersion).join(", ")}`);
 
                 daemonServer = await startDaemonServer(pkcRpcUrl, ipfsGatewayEndpoint, mergedPkcOptions, {
                     allowPrivateKeyExport: flags.allowPrivateKeyExport

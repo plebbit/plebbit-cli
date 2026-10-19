@@ -51,6 +51,11 @@ For modifying complex settings like challenges, consider using a web UI instead:
             command: `bitsocial community edit mycommunity.bso --settings.challenges[0].name question --settings.challenges[0].options.question "what is the password?" --settings.challenges[0].options.answer thepassword --settings.challenges[1].name captcha-canvas-v3`
         },
         {
+            description:
+                "Use an installed page sort package (bitsocial page-sort install @pkcprotocol/active-page-sort) as the preloaded posts sort, where replies containing 'sage' do not bump a thread",
+            command: `bitsocial community edit mycommunity.bso '--settings.pages.posts[0].name' @pkcprotocol/active-page-sort '--settings.pages.posts[0].options.noBumpKeywords' sage '--settings.pages.posts[0].preloaded' true`
+        },
+        {
             description: "Change the title and description",
             command: `bitsocial community edit mycommunity.bso --title "This is the new title" --description "This is the new description" `
         },
