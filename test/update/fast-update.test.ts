@@ -4,7 +4,7 @@ import path from "node:path";
 import os from "node:os";
 
 // Mock external dependencies before importing the module under test
-vi.mock("../../src/challenge-packages/challenge-utils.js", () => ({
+vi.mock("../../src/common-utils/npm.js", () => ({
     runNpmPack: vi.fn(),
     ensureNpmAvailable: vi.fn().mockResolvedValue(undefined),
     getNpmCliPath: vi.fn().mockResolvedValue("/usr/bin/npm"),
@@ -16,7 +16,7 @@ vi.mock("decompress", () => ({
 }));
 
 import { fastInstallGlobal } from "../../src/update/fast-update.js";
-import { runNpmPack } from "../../src/challenge-packages/challenge-utils.js";
+import { runNpmPack } from "../../src/common-utils/npm.js";
 import decompress from "decompress";
 
 const MOCK_OLD_PKG = {
