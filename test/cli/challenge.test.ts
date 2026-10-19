@@ -358,6 +358,17 @@ describe("bitsocial challenge list", () => {
 });
 
 describe("bitsocial challenge remove", () => {
+    it("refuses a name that escapes the challenges dir instead of deleting another data dir", async () => {
+        const dataPath = randomDirectory();
+        const communityDb = path.join(dataPath, "communities", "board.bso");
+        await fsPromise.mkdir(path.dirname(communityDb), { recursive: true });
+        await fsPromise.writeFile(communityDb, "db");
+        const result = await runBitsocialChallenge(["remove", "../communities", "--pkcOptions.dataPath", dataPath]);
+        expect(result.exitCode).not.toBe(0);
+        expect(result.stderr).toContain("Invalid package name");
+        expect(fs.existsSync(communityDb)).toBe(true);
+    });
+
     it("removes an installed challenge", async () => {
         const dataPath = randomDirectory();
         const challengeDir = path.join(dataPath, "challenges", "test-challenge");

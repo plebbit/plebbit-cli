@@ -39,9 +39,38 @@ export async function ensurePackagesDir(kind: PackageKind, dataPath?: string): P
     return dir;
 }
 
+export class InvalidPackageNameError extends Error {}
+
+// One segment of an npm package name, as far as it matters for a path: url-safe characters, no leading dot or
+// underscore. That rules out "." and ".." and any separator, so a name can never leave the packages dir.
+const PACKAGE_NAME_SEGMENT = /^[a-zA-Z0-9~-][a-zA-Z0-9._~-]*$/;
+
+/** Throw unless `name` is an npm package name: `pkg` or `@scope/pkg`. */
+export function assertValidPackageName(name: string): void {
+    const segments = name.split("/");
+    const valid =
+        segments.length === 1
+            ? PACKAGE_NAME_SEGMENT.test(segments[0])
+            : segments.length === 2 &&
+              segments[0].startsWith("@") &&
+              PACKAGE_NAME_SEGMENT.test(segments[0].slice(1)) &&
+              PACKAGE_NAME_SEGMENT.test(segments[1]);
+    if (!valid) {
+        throw new InvalidPackageNameError(`Invalid package name "${name}": expected an npm package name such as my-package or @scope/my-package`);
+    }
+}
+
 export function packageNameToDir(packagesDir: string, name: string): string {
-    // Handles both scoped (@org/pkg) and unscoped (pkg) names
-    return path.join(packagesDir, ...name.split("/"));
+    // Handles both scoped (@org/pkg) and unscoped (pkg) names. The name comes from the command line (remove) or
+    // from the package's own package.json (install), so it is validated before it becomes a path: without that,
+    // `remove ../communities` resolved to ${dataPath}/communities and deleted every community.
+    assertValidPackageName(name);
+    const dir = path.join(packagesDir, ...name.split("/"));
+    const relative = path.relative(packagesDir, dir);
+    if (!relative || relative.startsWith("..") || path.isAbsolute(relative)) {
+        throw new InvalidPackageNameError(`Invalid package name "${name}": resolves outside ${packagesDir}`);
+    }
+    return dir;
 }
 
 export async function readPackageJson(packageDir: string): Promise<{ name: string; version?: string; description?: string; main?: string; exports?: any }> {
@@ -173,8 +202,10 @@ export async function installPackage(
             }
         }
 
-        // 5. Read package info
+        // 5. Read package info. The name becomes the install directory, so reject one that is not an npm name
+        //    (e.g. "../challenges/x") before spending an npm install on it
         const pkg = await readPackageJson(pkgDir);
+        assertValidPackageName(pkg.name);
 
         // 6. Run npm install in the temp dir, so a failed install never
         //    touches an existing working installation of the same package
@@ -265,7 +296,7 @@ export async function removePackage(kind: PackageKind, { name, dataPath }: { nam
  * HTTP url of a daemon's reload endpoint for `kind`, derived from its --pkcRpcUrl. The endpoint
  * is served by the same http server as the RPC socket, and its local-only variant requires the
  * request to come from the loopback interface — so a wildcard bind is dialed as loopback rather
- * than as 0.0.0.0.
+ * than as 0.0.0.0. An auth key path in the url is kept, which selects the remote variant.
  */
 export function reloadUrlFromPkcRpcUrl(kind: PackageKind, pkcRpcUrl: string): string | undefined {
     let url: URL;
@@ -279,7 +310,11 @@ export function reloadUrlFromPkcRpcUrl(kind: PackageKind, pkcRpcUrl: string): st
     // compared and re-bracketed exactly once
     const hostname = url.hostname.replace(/^\[|\]$/g, "");
     const host = hostname === "0.0.0.0" || hostname === "::" ? "127.0.0.1" : hostname;
-    return `http://${host.includes(":") ? `[${host}]` : host}:${url.port}/api/${kind.subdir}/reload`;
+    // A remote daemon is reached through its auth key path (ws://host:port/<authKey>), and the daemon serves the
+    // reload route under that same prefix; the bare /api/... route only answers local connections
+    const authPath = url.pathname.replace(/\/+$/, "");
+    const scheme = url.protocol === "wss:" ? "https" : "http";
+    return `${scheme}://${host.includes(":") ? `[${host}]` : host}:${url.port}${authPath}/api/${kind.subdir}/reload`;
 }
 
 /** How long install/remove wait for a daemon to finish reloading before giving up. */

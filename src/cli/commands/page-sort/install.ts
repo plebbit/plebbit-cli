@@ -2,7 +2,7 @@ import { Args, Flags } from "@oclif/core";
 import { BaseCommand } from "../../base-command.js";
 import defaults from "../../../common-utils/defaults.js";
 import { validatePageSortFileFactory } from "@pkcprotocol/pkc-js/page-sorts";
-import { importPackageFactory, installPackage, InvalidPackageArchiveError, type InstallPackageResult } from "../../../common-utils/package-registry.js";
+import { importPackageFactory, installPackage, InvalidPackageArchiveError, InvalidPackageNameError, type InstallPackageResult } from "../../../common-utils/package-registry.js";
 import { PAGE_SORT_PACKAGE_KIND, reloadPageSortsInDaemon } from "../../../page-sort-packages/page-sort-utils.js";
 
 export default class Install extends BaseCommand {
@@ -45,7 +45,7 @@ export default class Install extends BaseCommand {
                     void validatePageSortFileFactory(await importPackageFactory(PAGE_SORT_PACKAGE_KIND, pkgDir, pkg), { name: pkg.name })
             });
         } catch (err) {
-            if (err instanceof InvalidPackageArchiveError) this.error(err.message);
+            if (err instanceof InvalidPackageArchiveError || err instanceof InvalidPackageNameError) this.error(err.message);
             throw err;
         }
 

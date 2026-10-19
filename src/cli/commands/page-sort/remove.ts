@@ -1,7 +1,7 @@
 import { Args, Flags } from "@oclif/core";
 import { BaseCommand } from "../../base-command.js";
 import defaults from "../../../common-utils/defaults.js";
-import { removePackage, PackageNotInstalledError } from "../../../common-utils/package-registry.js";
+import { removePackage, PackageNotInstalledError, InvalidPackageNameError, assertValidPackageName } from "../../../common-utils/package-registry.js";
 import { PAGE_SORT_PACKAGE_KIND, findPageSortUsages, reloadPageSortsInDaemon } from "../../../page-sort-packages/page-sort-utils.js";
 
 export default class Remove extends BaseCommand {
@@ -37,13 +37,20 @@ export default class Remove extends BaseCommand {
         const { args, flags } = await this.parse(Remove);
         const dataPath = flags["pkcOptions.dataPath"] || defaults.PKC_DATA_PATH;
 
+        try {
+            assertValidPackageName(args.name);
+        } catch (err) {
+            if (err instanceof InvalidPackageNameError) this.error(err.message);
+            throw err;
+        }
+
         if (!flags.force) await this._refuseIfInUse(args.name, flags.pkcRpcUrl.toString());
 
         let removed: { version?: string };
         try {
             removed = await removePackage(PAGE_SORT_PACKAGE_KIND, { name: args.name, dataPath });
         } catch (err) {
-            if (err instanceof PackageNotInstalledError) this.error(err.message);
+            if (err instanceof PackageNotInstalledError || err instanceof InvalidPackageNameError) this.error(err.message);
             throw err;
         }
 

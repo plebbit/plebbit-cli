@@ -1,7 +1,7 @@
 import { Args, Flags } from "@oclif/core";
 import { BaseCommand } from "../../base-command.js";
 import defaults from "../../../common-utils/defaults.js";
-import { removePackage, PackageNotInstalledError } from "../../../common-utils/package-registry.js";
+import { removePackage, PackageNotInstalledError, InvalidPackageNameError } from "../../../common-utils/package-registry.js";
 import { CHALLENGE_PACKAGE_KIND, reloadChallengesInDaemon } from "../../../challenge-packages/challenge-utils.js";
 
 export default class Remove extends BaseCommand {
@@ -36,7 +36,7 @@ export default class Remove extends BaseCommand {
         try {
             removed = await removePackage(CHALLENGE_PACKAGE_KIND, { name: args.name, dataPath });
         } catch (err) {
-            if (err instanceof PackageNotInstalledError) this.error(err.message);
+            if (err instanceof PackageNotInstalledError || err instanceof InvalidPackageNameError) this.error(err.message);
             throw err;
         }
 
