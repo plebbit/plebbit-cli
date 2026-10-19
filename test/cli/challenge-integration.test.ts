@@ -2,9 +2,12 @@ import { ChildProcess, spawn } from "child_process";
 import { describe, it, beforeAll, afterAll, expect } from "vitest";
 import { directory as randomDirectory } from "tempy";
 import fsPromise from "fs/promises";
+import fsSync from "fs";
 import path from "path";
 import dns from "node:dns";
 import PKC from "@pkcprotocol/pkc-js";
+import { reloadPageSortsInDaemon } from "../../src/page-sort-packages/page-sort-utils.js";
+import { reloadChallengesInDaemon } from "../../src/challenge-packages/challenge-utils.js";
 import {
     type ManagedChildProcess,
     stopPkcDaemon,
@@ -21,6 +24,8 @@ type PKCInstance = Awaited<ReturnType<typeof PKC>>;
 let RPC_PORT: number;
 let KUBO_API_PORT: number;
 let rpcWsUrl: string;
+
+const REAL_PAGE_SORT = "@pkcprotocol/active-page-sort";
 
 // --- Helpers specific to this test file ---
 
@@ -56,12 +61,17 @@ const createMinimalChallengeDir = async (
     );
 };
 
-const runBitsocialChallenge = (
+const runBitsocialChallenge = (args: string[], env?: Record<string, string>) => runBitsocialTopic("challenge", args, env);
+
+const runBitsocialPageSort = (args: string[], env?: Record<string, string>) => runBitsocialTopic("page-sort", args, env);
+
+const runBitsocialTopic = (
+    topic: "challenge" | "page-sort",
     args: string[],
     env?: Record<string, string>
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> => {
     return new Promise((resolve, reject) => {
-        const proc = spawn("node", ["./bin/run", "challenge", ...args], {
+        const proc = spawn("node", ["./bin/run", topic, ...args], {
             stdio: ["pipe", "pipe", "pipe"],
             env: env ? { ...process.env, ...env } : undefined
         });
@@ -76,7 +86,7 @@ const runBitsocialChallenge = (
         });
         const timer = setTimeout(() => {
             proc.kill("SIGKILL");
-            reject(new Error("bitsocial challenge command timed out"));
+            reject(new Error(`bitsocial ${topic} command timed out`));
         }, 60000);
         proc.on("close", (exitCode) => {
             clearTimeout(timer);
@@ -163,6 +173,12 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
         const installResult = await runBitsocialChallenge(["install", challengeSrcDir, "--pkcOptions.dataPath", dataPath]);
         expect(installResult.exitCode).toBe(0);
         expect(installResult.stdout).toContain("added test-challenge@1.0.0 in");
+
+        // And the real reference page sort package from npm (issue #164): it goes through pkc-js's
+        // validatePageSortFileFactory at install, and the daemon must load it on start
+        const pageSortInstall = await runBitsocialPageSort(["install", REAL_PAGE_SORT, "--pkcOptions.dataPath", dataPath]);
+        expect(pageSortInstall.exitCode).toBe(0);
+        expect(pageSortInstall.stdout).toContain(`added ${REAL_PAGE_SORT}@`);
 
         // Start daemon — it handles kubo, RPC, and webui internally. Dynamic ports + retry guard
         // against the macOS ephemeral-range bind race (issue #87); the seeded dataPath is reused
@@ -513,16 +529,14 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
             const rpcClient = (pkc as any).clients.pkcRpcClients[rpcWsUrl];
             expect(rpcClient.settings?.pageSorts?.[pageSortName]).toBeUndefined();
 
-            const installResult = await new Promise<{ stdout: string; exitCode: number | null }>((resolve) => {
-                const proc = spawn(
-                    "node",
-                    ["./bin/run", "page-sort", "install", srcDir, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl],
-                    { stdio: ["pipe", "pipe", "pipe"] }
-                );
-                let stdout = "";
-                proc.stdout.on("data", (data: Buffer) => (stdout += data.toString()));
-                proc.on("close", (exitCode) => resolve({ stdout, exitCode }));
-            });
+            const installResult = await runBitsocialPageSort([
+                "install",
+                srcDir,
+                "--pkcOptions.dataPath",
+                dataPath,
+                "--pkcRpcUrl",
+                rpcWsUrl
+            ]);
             expect(installResult.exitCode).toBe(0);
             expect(installResult.stdout).toContain(`reloaded ${pageSortName}@1.0.0 in the daemon at ${rpcWsUrl}`);
 
@@ -534,6 +548,67 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
             await sub.edit({ settings: { ...sub.settings, pages } });
             expect(sub.settings?.pages).toEqual(pages);
             expect(sub.pageSorts?.posts?.integrationNewest?.name).toBe(pageSortName);
+        });
+
+        it("daemon loads page sort packages installed before it started", () => {
+            expect(daemonProcess?.capturedStdout).toMatch(new RegExp(`Loaded page sort packages: .*${REAL_PAGE_SORT}@`));
+            const rpcClient = (pkc as any).clients.pkcRpcClients[rpcWsUrl];
+            expect(rpcClient.settings?.pageSorts?.[REAL_PAGE_SORT]).toBeDefined();
+        });
+
+        // The real package's declared options are what the server validates settings.pages[i].options against
+        it("a community can use the real reference package with its documented options", { timeout: 60_000 }, async () => {
+            const sub = await pkc.createCommunity();
+            const pages = { posts: [{ name: REAL_PAGE_SORT, options: { noBumpKeywords: "sage" }, preloaded: true }] };
+            await sub.edit({ settings: { ...sub.settings, pages } });
+            expect(sub.settings?.pages).toEqual(pages);
+        });
+
+        // The remove guard reads settings.pages through a fresh RPC client's createCommunity({ address }); the unit
+        // tests fake that client, so this pins that a real daemon hands the settings back
+        it("page-sort remove refuses while a community uses the package, then removes it and clients drop it", { timeout: 180_000 }, async () => {
+            const pageSortName = "test-remove-page-sort";
+            const srcDir = path.join(randomDirectory(), pageSortName);
+            await fsPromise.mkdir(srcDir, { recursive: true });
+            await fsPromise.writeFile(path.join(srcDir, "package.json"), JSON.stringify({ name: pageSortName, version: "1.0.0" }));
+            await fsPromise.writeFile(
+                path.join(srcDir, "index.js"),
+                "export default function () { return { sortName: 'removeTestOldest', score: ({ comment }) => -comment.timestamp }; }\n"
+            );
+            const install = await runBitsocialPageSort(["install", srcDir, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl]);
+            expect(install.exitCode).toBe(0);
+
+            const rpcClient = (pkc as any).clients.pkcRpcClients[rpcWsUrl];
+            expect(await waitForCondition(() => !!rpcClient.settings?.pageSorts?.[pageSortName], 20000, 200)).toBe(true);
+
+            const sub = await pkc.createCommunity();
+            await sub.edit({ settings: { ...sub.settings, pages: { posts: [{ name: "hot" }, { name: pageSortName }] } } });
+
+            const refused = await runBitsocialPageSort(["remove", pageSortName, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl]);
+            expect(refused.exitCode).not.toBe(0);
+            // oclif wraps error output at the terminal width and prefixes each line with "›"
+            const refusal = refused.stderr.replace(/›/g, " ").replace(/\s+/g, " ");
+            expect(refusal).toContain(`Page sort "${pageSortName}" is still used by:`);
+            expect(refusal).toContain(`${sub.address} settings.pages.posts[1]`);
+            expect(fsSync.existsSync(path.join(dataPath, "page-sorts", pageSortName))).toBe(true);
+
+            await sub.edit({ settings: { ...sub.settings, pages: { posts: [{ name: "hot" }] } } });
+
+            const removed = await runBitsocialPageSort(["remove", pageSortName, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl]);
+            expect(removed.exitCode).toBe(0);
+            expect(removed.stdout).toContain(`removed ${pageSortName}@1.0.0`);
+            expect(fsSync.existsSync(path.join(dataPath, "page-sorts", pageSortName))).toBe(false);
+            // The remove reloaded the daemon, which pushed the shrunken registry to connected clients
+            expect(await waitForCondition(() => !rpcClient.settings?.pageSorts?.[pageSortName], 20000, 200)).toBe(true);
+        });
+
+        // A daemon reached through its auth key only serves the reload routes under that prefix
+        it("reloads through the auth key URL a remote client would use", { timeout: 60_000 }, async () => {
+            const authUrl = daemonProcess?.capturedStdout?.match(/listening on (\S+) \(secret auth key/)?.[1];
+            expect(authUrl).toBeDefined();
+            expect(new URL(authUrl!).pathname.length).toBeGreaterThan(1);
+            expect(await reloadPageSortsInDaemon(authUrl!)).toBe(true);
+            expect(await reloadChallengesInDaemon(authUrl!)).toBe(true);
         });
     });
 });
