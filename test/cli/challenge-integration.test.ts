@@ -586,8 +586,8 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
 
             const refused = await runBitsocialPageSort(["remove", pageSortName, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl]);
             expect(refused.exitCode).not.toBe(0);
-            // oclif wraps error output at the terminal width and prefixes each line with "›"
-            const refusal = refused.stderr.replace(/›/g, " ").replace(/\s+/g, " ");
+            // oclif wraps error output at the terminal width and prefixes each line with "›" ("»" on Windows)
+            const refusal = refused.stderr.replace(/[›»]/g, " ").replace(/\s+/g, " ");
             expect(refusal).toContain(`Page sort "${pageSortName}" is still used by:`);
             expect(refusal).toContain(`${sub.address} settings.pages.posts[1]`);
             expect(fsSync.existsSync(path.join(dataPath, "page-sorts", pageSortName))).toBe(true);
