@@ -1,5 +1,19 @@
 # Changelog
 
+## <small>0.19.106 (2026-10-19)</small>
+
+* chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.114 ([2e4e018](https://github.com/bitsocialnet/bitsocial-cli/commit/2e4e018))
+  * pkc-js [0.0.114](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.114) (2026-10-18)
+    * fix(ci): run one release at a time so overlapping runs cannot publish the same version ([c036a2e](https://github.com/pkcprotocol/pkc-js/commit/c036a2e41b10216b4259384c9ba142bb0a6fb6fc)), closes [#408](https://github.com/pkcprotocol/pkc-js/issues/408)
+    * fix(release): publish the [#408](https://github.com/pkcprotocol/pkc-js/issues/408) tombstone fix as 0.0.114 ([f2d0229](https://github.com/pkcprotocol/pkc-js/commit/f2d02295b94b72a8c515f8bf0bd10764b7086141))
+  * pkc-js [0.0.113](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.113) (2026-10-18)
+    * fix(community): skip removed/deleted replies in reply counts and bumps, keep the replies under them ([#404](https://github.com/pkcprotocol/pkc-js/issues/404)) ([29e0206](https://github.com/pkcprotocol/pkc-js/commit/29e020614277af10fb047f73cc3311cb4472f2ed)), closes [#403](https://github.com/pkcprotocol/pkc-js/issues/403) [#403](https://github.com/pkcprotocol/pkc-js/issues/403) [#405](https://github.com/pkcprotocol/pkc-js/issues/405) [#405](https://github.com/pkcprotocol/pkc-js/issues/405) [#403](https://github.com/pkcprotocol/pkc-js/issues/403) [#405](https://github.com/pkcprotocol/pkc-js/issues/405)
+    * fix(pages): pass tombstone replies to requireReplies page sorts ([#408](https://github.com/pkcprotocol/pkc-js/issues/408)) ([0ac709c](https://github.com/pkcprotocol/pkc-js/commit/0ac709c8f07cded5d71290f88ced4c9c565ad6bd)), closes [#407](https://github.com/pkcprotocol/pkc-js/issues/407) [#407](https://github.com/pkcprotocol/pkc-js/issues/407) [#407](https://github.com/pkcprotocol/pkc-js/issues/407) [#407](https://github.com/pkcprotocol/pkc-js/issues/407)
+  * pkc-js [0.0.112](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.112) (2026-10-18)
+    * fix(types): let a page entry pass as PageSortReplyEntry under exactOptionalPropertyTypes ([470b742](https://github.com/pkcprotocol/pkc-js/commit/470b74295ec99d9ae2049c5c79e003146a07c7eb)), closes [#402](https://github.com/pkcprotocol/pkc-js/issues/402)
+  * pkc-js [0.0.111](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.111) (2026-10-18)
+    * fix(community): give an author's concurrent publications one pseudonymity alias ([#399](https://github.com/pkcprotocol/pkc-js/issues/399)) ([#400](https://github.com/pkcprotocol/pkc-js/issues/400)) ([df73eec](https://github.com/pkcprotocol/pkc-js/commit/df73eece358e19e37ac2509db3d444afd0112b65))
+
 ## <small>0.19.105 (2026-10-17)</small>
 
 * chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.110 ([695f9fd](https://github.com/bitsocialnet/bitsocial-cli/commit/695f9fd))
