@@ -136,7 +136,7 @@ export default class Daemon extends Command {
         "bitsocial daemon",
         "bitsocial daemon --pkcRpcUrl ws://localhost:53812",
         "bitsocial daemon --pkcOptions.dataPath /tmp/bitsocial-datapath/",
-        "bitsocial daemon --pkcOptions.kuboRpcClientsOptions[0] https://remoteipfsnode.com",
+        "bitsocial daemon '--pkcOptions.kuboRpcClientsOptions[0]' https://remoteipfsnode.com",
         "bitsocial daemon --chainProviderUrls https://mainnet.infura.io/v3/YOUR_KEY",
         "bitsocial daemon --no-allowPrivateKeyExport",
     ];

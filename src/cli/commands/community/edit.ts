@@ -47,8 +47,8 @@ For modifying complex settings like challenges, consider using a web UI instead:
         },
         {
             description:
-                "Add two challenges to the community. The first challenge will be a question and answer, and the second will be an image captcha",
-            command: `bitsocial community edit mycommunity.bso --settings.challenges[0].name question --settings.challenges[0].options.question "what is the password?" --settings.challenges[0].options.answer thepassword --settings.challenges[1].name captcha-canvas-v3`
+                "Add two challenges to the community. The first challenge will be a question and answer, and the second will be a math question",
+            command: `bitsocial community edit mycommunity.bso '--settings.challenges[0].name' question '--settings.challenges[0].options.question' "what is the password?" '--settings.challenges[0].options.answer' thepassword '--settings.challenges[1].name' text-math`
         },
         {
             description:
@@ -61,7 +61,7 @@ For modifying complex settings like challenges, consider using a web UI instead:
         },
         {
             description: "Remove a role from a moderator/admin/owner",
-            command: "bitsocial community edit bitsocial.bso --roles['rinse12.bso'] null"
+            command: `bitsocial community edit bitsocial.bso '--roles["rinse12.bso"]' null`
         },
         {
             description: "Enable settings.fetchThumbnailUrls to fetch the thumbnail of url submitted by authors",
