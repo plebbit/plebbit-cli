@@ -1,5 +1,19 @@
 # Changelog
 
+## <small>0.19.107 (2026-10-20)</small>
+
+* fix: reload replaced CommonJS package entry points instead of the cached module ([c6a9218](https://github.com/bitsocialnet/bitsocial-cli/commit/c6a9218))
+* fix: validate package names and keep the auth key path in reload URLs ([79ed6e4](https://github.com/bitsocialnet/bitsocial-cli/commit/79ed6e4))
+* test: cover page sort packages against a real daemon ([c4c4d27](https://github.com/bitsocialnet/bitsocial-cli/commit/c4c4d27))
+* test: strip the Windows oclif wrap marker in the page-sort refusal check ([e714498](https://github.com/bitsocialnet/bitsocial-cli/commit/e714498))
+* feat: add page-sort install/list/remove for pkc-js page sort packages ([f3608e0](https://github.com/bitsocialnet/bitsocial-cli/commit/f3608e0)), closes [#171](https://github.com/bitsocialnet/bitsocial-cli/issues/171)
+* refactor: extract a generic package registry from challenge-utils ([6c20dda](https://github.com/bitsocialnet/bitsocial-cli/commit/6c20dda)), closes [#164](https://github.com/bitsocialnet/bitsocial-cli/issues/164)
+* chore(deps): upgrade @pkcprotocol/pkc-js from 0.0.114 to 0.0.115
+  * pkc-js [0.0.115](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.115) (2026-10-19)
+    * feat(community): reload challenge and page sort packages in running communities ([#415](https://github.com/pkcprotocol/pkc-js/issues/415)) ([2a95dcb](https://github.com/pkcprotocol/pkc-js/commit/2a95dcb76897c17961d7dcdbbf3ef11d71ca56eb))
+    * fix(community): stop a failing exchange rolling back another exchange's insert ([#417](https://github.com/pkcprotocol/pkc-js/issues/417)) ([#419](https://github.com/pkcprotocol/pkc-js/issues/419)) ([9571e37](https://github.com/pkcprotocol/pkc-js/commit/9571e3732edc827143e000464410c2cc61a8dfc9)), closes [#387](https://github.com/pkcprotocol/pkc-js/issues/387) [#387](https://github.com/pkcprotocol/pkc-js/issues/387)
+    * fix(pubsub): retry and fall back when a pubsub subscribe fails to connect ([#422](https://github.com/pkcprotocol/pkc-js/issues/422)) ([#423](https://github.com/pkcprotocol/pkc-js/issues/423)) ([74f5b83](https://github.com/pkcprotocol/pkc-js/commit/74f5b83f76b1ad147dccfdb9af930428cc55ea99))
+
 ## <small>0.19.106 (2026-10-19)</small>
 
 * chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.114 ([2e4e018](https://github.com/bitsocialnet/bitsocial-cli/commit/2e4e018))
