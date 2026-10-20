@@ -545,6 +545,9 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
 
             const sub = await pkc.createCommunity();
             await sub.edit({ settings: { challenges: [{ name }] } });
+            // Once the package is gone, pkc-js with pkcprotocol/pkc-js#429 emits ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD
+            // on the running community; an unhandled "error" event would throw
+            sub.on("error", () => {});
             await sub.start();
             expect(await waitForCondition(() => !!(sub as any).updatedAt, 60000, 500)).toBe(true);
 
@@ -558,9 +561,10 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
             expect(result.challengeSuccess).toBe(false);
             expect(result.reason).toContain("One of the community challenges is misconfigured");
 
-            // A restart (or a daemon restart) can't load the challenge, so the community goes offline. pkc-js should report
-            // this instead of throwing, with an error that names the challenge (pkcprotocol/pkc-js#428); update these
-            // assertions when a pkc-js bump changes it
+            // A restart (or a daemon restart) can't load the challenge, so the community goes offline. pkc-js keeps that
+            // on purpose but names the error (pkcprotocol/pkc-js#429): once a release with it is installed, start()
+            // rejects with ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD and the publish reason above names the challenge, so
+            // update these assertions in that bump
             await sub.stop();
             const restarted = await pkc.createCommunity({ address: sub.address });
             restarted.on("error", () => {});
