@@ -1,5 +1,11 @@
 # Changelog
 
+## <small>0.19.109 (2026-10-20)</small>
+
+* fix: quote bracketed flags in command examples and replace the stale captcha-canvas-v3 challenge ([b165c8c](https://github.com/bitsocialnet/bitsocial-cli/commit/b165c8c))
+* docs: add docs index, challenges.md and page-sorts.md, and an AGENTS.md docs lookup ([4c1d1a0](https://github.com/bitsocialnet/bitsocial-cli/commit/4c1d1a0))
+* docs: quote bracketed challenge flags and scope the docs index rule to topic docs ([22d95c4](https://github.com/bitsocialnet/bitsocial-cli/commit/22d95c4))
+
 ## <small>0.19.108 (2026-10-20)</small>
 
 * feat: show page sort sortName in list and warn when an upgrade changes it ([31e2cd0](https://github.com/bitsocialnet/bitsocial-cli/commit/31e2cd0))
