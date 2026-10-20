@@ -67,6 +67,19 @@ src/
 └── index.ts             # package entry point
 ```
 
+## Docs Lookup
+
+Topic docs live flat under `docs/`; [docs/README.md](docs/README.md) is the index. Before touching an area, read its doc:
+
+| Touching                                                                 | Read                                       |
+| ------------------------------------------------------------------------ | ------------------------------------------ |
+| `src/cli/commands/challenge/`, `src/challenge-packages/`                 | [docs/challenges.md](docs/challenges.md)   |
+| `src/cli/commands/page-sort/`, `src/page-sort-packages/`                 | [docs/page-sorts.md](docs/page-sorts.md)   |
+| `src/common-utils/package-registry.ts`, package reload endpoints in `src/webui/daemon-server.ts` | both of the above |
+| `settings.challenges` / `settings.pages` examples in `src/cli/commands/community/edit.ts` | the matching doc above |
+
+When a change alters behavior a doc describes (commands, flags, paths, endpoints, output), update the doc in the same PR.
+
 ## GitHub Issues
 
 When the user gives a prompt to implement a feature or bug fix in this repository's codebase:
@@ -98,6 +111,10 @@ Routine live operations are not repository feature work:
 ### Code Organization
 
 - **MUST** add a test when you add a feature or fix a bug.
+
+### Docs
+
+- **MUST** add an entry to `docs/README.md` when adding a markdown file under `docs/`, and a row to the Docs Lookup table above if the doc maps to source paths.
 
 ## Core SHOULD Rules
 
