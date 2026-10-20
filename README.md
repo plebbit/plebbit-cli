@@ -698,12 +698,12 @@ EXAMPLES
 
     $ bitsocial community edit mycommunity.bso '--roles["esteban.bso"].role' admin
 
-  Add two challenges to the community. The first challenge will be a question and answer, and the second will be an
-  image captcha
+  Add two challenges to the community. The first challenge will be a question and answer, and the second will be a
+  math question
 
-    $ bitsocial community edit mycommunity.bso --settings.challenges[0].name question \
-      --settings.challenges[0].options.question "what is the password?" --settings.challenges[0].options.answer \
-      thepassword --settings.challenges[1].name captcha-canvas-v3
+    $ bitsocial community edit mycommunity.bso '--settings.challenges[0].name' question \
+      '--settings.challenges[0].options.question' "what is the password?" '--settings.challenges[0].options.answer' \
+      thepassword '--settings.challenges[1].name' text-math
 
   Use an installed page sort package (bitsocial page-sort install @pkcprotocol/active-page-sort) as the preloaded
   posts sort, where replies containing 'sage' do not bump a thread
@@ -718,7 +718,7 @@ EXAMPLES
 
   Remove a role from a moderator/admin/owner
 
-    $ bitsocial community edit bitsocial.bso --roles['rinse12.bso'] null
+    $ bitsocial community edit bitsocial.bso '--roles["rinse12.bso"]' null
 
   Enable settings.fetchThumbnailUrls to fetch the thumbnail of url submitted by authors
 
@@ -931,7 +931,7 @@ EXAMPLES
 
   $ bitsocial daemon --pkcOptions.dataPath /tmp/bitsocial-datapath/
 
-  $ bitsocial daemon --pkcOptions.kuboRpcClientsOptions[0] https://remoteipfsnode.com
+  $ bitsocial daemon '--pkcOptions.kuboRpcClientsOptions[0]' https://remoteipfsnode.com
 
   $ bitsocial daemon --chainProviderUrls https://mainnet.infura.io/v3/YOUR_KEY
 
