@@ -545,8 +545,8 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
 
             const sub = await pkc.createCommunity();
             await sub.edit({ settings: { challenges: [{ name }] } });
-            // Once the package is gone, pkc-js with pkcprotocol/pkc-js#429 emits ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD
-            // on the running community; an unhandled "error" event would throw
+            // Once the package is gone, pkc-js emits ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD on the running community
+            // (pkcprotocol/pkc-js#429); an unhandled "error" event would throw
             sub.on("error", () => {});
             await sub.start();
             expect(await waitForCondition(() => !!(sub as any).updatedAt, 60000, 500)).toBe(true);
@@ -559,16 +559,14 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
             expect(sub.challenges).toEqual([{ challenge: "7+7", type: "text/plain" }]);
             const result = await publishCommentWithChallenge({ pkc, communityAddress: sub.address, challengeAnswer: "14" });
             expect(result.challengeSuccess).toBe(false);
-            expect(result.reason).toContain("One of the community challenges is misconfigured");
+            expect(result.reason).toContain(`One of the community challenges is misconfigured: challenge "${name}" is not registered on this node`);
 
             // A restart (or a daemon restart) can't load the challenge, so the community goes offline. pkc-js keeps that
-            // on purpose but names the error (pkcprotocol/pkc-js#429): once a release with it is installed, start()
-            // rejects with ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD and the publish reason above names the challenge, so
-            // update these assertions in that bump
+            // on purpose and names the error (pkcprotocol/pkc-js#429)
             await sub.stop();
             const restarted = await pkc.createCommunity({ address: sub.address });
             restarted.on("error", () => {});
-            await expect(restarted.start()).rejects.toThrow(/expected function, received undefined/);
+            await expect(restarted.start()).rejects.toMatchObject({ code: "ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD" });
             expect(await waitForCondition(() => restarted.startedState === "failed", 20000, 200)).toBe(true);
         });
     });

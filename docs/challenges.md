@@ -108,7 +108,7 @@ or pass --force to remove it anyway (those communities reject every publication 
 
 Otherwise it deletes the directory and reloads the daemon.
 
-The reason: pkc-js can't load a challenge whose name is no longer registered. A running community keeps advertising the old challenge but rejects every publication (`One of the community challenges is misconfigured`), and on its next start (including a daemon restart) `start()` throws and the community stays offline until its settings are changed.
+The reason: pkc-js can't load a challenge whose name is no longer registered. A running community keeps advertising the old challenge and stays up, but rejects every publication (`One of the community challenges is misconfigured: challenge "<name>" is not registered on this node`) and emits `ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD`. On its next start (including a daemon restart) `start()` fails with `ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD` and the community stays offline until its settings are changed or the package is installed again.
 
 - **Only `name` entries count.** An entry with a `path` loads that file, so it doesn't use the package.
 - **A package named after a pkc-js built-in** (`question`, `text-math`, `fail`, `blacklist`, `whitelist`, `publication-match`) is refused the same way. Removing it hands the built-in back, so nothing breaks, but those communities switch to the built-in challenge. The refusal says so.
@@ -120,6 +120,7 @@ The reason: pkc-js can't load a challenge whose name is no longer registered. A 
 - **Install fails with "No valid package.json found in the archive":** the spec did not produce an npm package tarball.
 - **Install fails validation:** the default export is not a challenge factory. A page sort package belongs under `bitsocial page-sort install`.
 - **Daemon log `Failed to load challenge "<name>"`:** the package is installed but its entry point throws on import. It is left out of the registry until fixed. A previously loaded version keeps serving.
+- **A community fails to start with `ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD`** (publishers see `challenge "<name>" is not registered on this node`): an entry in its `settings.challenges` names a challenge this daemon doesn't have, usually a package that was removed with `--force` or never installed on this node. The error's `details.failures` lists each entry and `details.availableChallengeNames` lists what is registered. Reinstall the package with `bitsocial challenge install`, or change the entry with `bitsocial community edit`, then start the community again (`bitsocial community start <address>`).
 - **`install` printed no `reloaded ...` line:** no daemon answered at `--pkcRpcUrl`. Pass the URL the daemon actually listens on, including the auth key path for a remote daemon, or restart the daemon.
 
 ## Writing a challenge package
