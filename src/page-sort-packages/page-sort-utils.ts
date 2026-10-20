@@ -1,6 +1,9 @@
+import { validatePageSortFileFactory } from "@pkcprotocol/pkc-js/page-sorts";
 import {
     getPackagesDir,
+    importPackageFactory,
     listInstalledPackages,
+    readPackageJson,
     loadPackagesIntoPKC,
     reloadPackagesInDaemon,
     PACKAGE_RELOAD_TIMEOUT_MS,
@@ -31,6 +34,16 @@ export const reloadPageSortsInDaemon = (pkcRpcUrl: string | URL, timeoutMs = PAC
 
 export const loadPageSortsIntoPKC = (dataPath?: string): Promise<InstalledPageSort[]> =>
     loadPackagesIntoPKC(PAGE_SORT_PACKAGE_KIND, dataPath);
+
+/**
+ * Import a page sort package, validate it the way a community would, and return its sortName: the key it publishes
+ * under in pageCids, which need not match the package name (issue #173).
+ */
+export async function readPageSortName(packageDir: string, pkg?: { name: string; main?: string }): Promise<string> {
+    const packageJson = pkg ?? (await readPackageJson(packageDir));
+    const factory = await importPackageFactory(PAGE_SORT_PACKAGE_KIND, packageDir, packageJson);
+    return validatePageSortFileFactory(factory, { name: packageJson.name }).sortName;
+}
 
 /** Where a community's settings.pages names `pageSortName`, e.g. "posts[0]". */
 export function findPageSortUsages(

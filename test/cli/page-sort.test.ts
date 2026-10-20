@@ -17,7 +17,7 @@ dns.setDefaultResultOrder("ipv4first");
 
 // Page sort packages (issue #164): same install machinery as challenges, registered into PKC.pageSorts.
 
-const createMinimalPageSortDir = async (dir: string, name: string, opts?: { version?: string; description?: string }): Promise<void> => {
+const createMinimalPageSortDir = async (dir: string, name: string, opts?: { version?: string; description?: string; sortName?: string }): Promise<void> => {
     await fsPromise.mkdir(dir, { recursive: true });
     await fsPromise.writeFile(
         path.join(dir, "package.json"),
@@ -26,7 +26,7 @@ const createMinimalPageSortDir = async (dir: string, name: string, opts?: { vers
     await fsPromise.writeFile(
         path.join(dir, "index.js"),
         `export default function () {
-    return { sortName: "fromPackage", description: ${JSON.stringify(opts?.description ?? "A test sort")}, score: ({ comment }) => comment.timestamp };
+    return { sortName: ${JSON.stringify(opts?.sortName ?? "fromPackage")}, description: ${JSON.stringify(opts?.description ?? "A test sort")}, score: ({ comment }) => comment.timestamp };
 }
 `
     );
@@ -78,7 +78,45 @@ describe("bitsocial page-sort install / list / remove", () => {
 
         const list = await runBitsocialPageSort(["list", "--pkcOptions.dataPath", dataPath]);
         expect(list.stdout).toContain(path.resolve(dataPath, "page-sorts"));
-        expect(list.stdout).toContain("└── test-page-sort@1.0.0");
+        expect(list.stdout).toContain("└── test-page-sort@1.0.0 (sortName: fromPackage)");
+    });
+
+    // The sortName is the key a package publishes under in pageCids, and need not match the package name (issue #173)
+    it("lists each package's sortName and reports a package that fails to load without dropping the others", async () => {
+        const dataPath = randomDirectory();
+        await runBitsocialPageSort(["install", srcDir, "--pkcOptions.dataPath", dataPath]);
+        // Planted directly: install would refuse it
+        const brokenDir = path.join(dataPath, "page-sorts", "broken-page-sort");
+        await createMinimalPageSortDir(brokenDir, "broken-page-sort", { version: "0.1.0" });
+        await fsPromise.writeFile(path.join(brokenDir, "index.js"), `throw new Error("broken page sort");\n`);
+
+        const list = await runBitsocialPageSort(["list", "--pkcOptions.dataPath", dataPath]);
+        expect(list.exitCode).toBe(0);
+        expect(list.stdout).toContain("├── broken-page-sort@0.1.0 (failed to load: broken page sort)");
+        expect(list.stdout).toContain("└── test-page-sort@1.0.0 (sortName: fromPackage)");
+
+        const quiet = await runBitsocialPageSort(["list", "-q", "--pkcOptions.dataPath", dataPath]);
+        expect(quiet.stdout.trim().split(/\r?\n/)).toEqual(["broken-page-sort", "test-page-sort"]);
+    });
+
+    it("warns when an upgrade changes the package's sortName, and not when it keeps it", async () => {
+        const dataPath = randomDirectory();
+        const first = await runBitsocialPageSort(["install", srcDir, "--pkcOptions.dataPath", dataPath]);
+        expect(first.stderr).not.toContain("sortName");
+
+        const sameNameDir = path.join(randomDirectory(), "test-page-sort");
+        await createMinimalPageSortDir(sameNameDir, "test-page-sort", { version: "1.1.0" });
+        const sameName = await runBitsocialPageSort(["install", sameNameDir, "--pkcOptions.dataPath", dataPath]);
+        expect(sameName.exitCode).toBe(0);
+        expect(sameName.stderr).not.toContain("sortName");
+
+        const renamedDir = path.join(randomDirectory(), "test-page-sort");
+        await createMinimalPageSortDir(renamedDir, "test-page-sort", { version: "2.0.0", sortName: "renamedSort" });
+        const renamed = await runBitsocialPageSort(["install", renamedDir, "--pkcOptions.dataPath", dataPath]);
+        expect(renamed.exitCode).toBe(0);
+        expect(renamed.stdout).toContain("changed test-page-sort@2.0.0 in");
+        const warning = renamed.stderr.replace(/[›»]/g, " ").replace(/\s+/g, " ");
+        expect(warning).toContain('test-page-sort changed its sortName from "fromPackage" to "renamedSort"');
     });
 
     it("installs a scoped package and lists names only with -q", async () => {

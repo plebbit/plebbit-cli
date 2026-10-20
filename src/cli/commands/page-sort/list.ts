@@ -3,7 +3,7 @@ import { EOL } from "os";
 import path from "path";
 import defaults from "../../../common-utils/defaults.js";
 import { formatPackageNameVersion } from "../../../common-utils/package-registry.js";
-import { getPageSortsDir, listInstalledPageSorts } from "../../../page-sort-packages/page-sort-utils.js";
+import { getPageSortsDir, listInstalledPageSorts, readPageSortName } from "../../../page-sort-packages/page-sort-utils.js";
 
 export default class List extends Command {
     static override description = "List installed page sort packages";
@@ -35,11 +35,21 @@ export default class List extends Command {
         if (flags.quiet) {
             this.log(pageSorts.map((p) => p.name).join(EOL));
         } else {
-            // npm-ls-style tree: page sorts dir header, then name@version entries
+            // npm-ls-style tree: page sorts dir header, then name@version entries with the sortName each publishes
+            // under, which is what communities and frontends see. A package that fails to load is reported in place
+            // rather than failing the whole listing.
+            const details = await Promise.all(
+                pageSorts.map((p) =>
+                    readPageSortName(p.path).then(
+                        (sortName) => `sortName: ${sortName}`,
+                        (err) => `failed to load: ${err instanceof Error ? err.message : String(err)}`
+                    )
+                )
+            );
             this.log(path.resolve(getPageSortsDir(dataPath)));
             pageSorts.forEach((p, i) => {
                 const branch = i === pageSorts.length - 1 ? "└── " : "├── ";
-                this.log(`${branch}${formatPackageNameVersion(p)}`);
+                this.log(`${branch}${formatPackageNameVersion(p)} (${details[i]})`);
             });
         }
     }
