@@ -1,5 +1,9 @@
 # Changelog
 
+## <small>0.19.108 (2026-10-20)</small>
+
+* feat: show page sort sortName in list and warn when an upgrade changes it ([31e2cd0](https://github.com/bitsocialnet/bitsocial-cli/commit/31e2cd0))
+
 ## <small>0.19.107 (2026-10-20)</small>
 
 * fix: reload replaced CommonJS package entry points instead of the cached module ([c6a9218](https://github.com/bitsocialnet/bitsocial-cli/commit/c6a9218))
