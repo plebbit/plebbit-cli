@@ -1,14 +1,8 @@
 import { Args, Flags } from "@oclif/core";
 import { BaseCommand } from "../../base-command.js";
-import fs from "fs/promises";
-import path from "path";
 import defaults from "../../../common-utils/defaults.js";
-import {
-    getChallengesDir,
-    challengeNameToDir,
-    readChallengePackageJson,
-    reloadChallengesInDaemon
-} from "../../../challenge-packages/challenge-utils.js";
+import { removePackage, PackageNotInstalledError, InvalidPackageNameError } from "../../../common-utils/package-registry.js";
+import { CHALLENGE_PACKAGE_KIND, reloadChallengesInDaemon } from "../../../challenge-packages/challenge-utils.js";
 
 export default class Remove extends BaseCommand {
     static override description = "Remove an installed challenge package";
@@ -38,42 +32,15 @@ export default class Remove extends BaseCommand {
         const { args, flags } = await this.parse(Remove);
         const dataPath = flags["pkcOptions.dataPath"] || defaults.PKC_DATA_PATH;
 
-        const challengesDir = getChallengesDir(dataPath);
-        const challengeDir = challengeNameToDir(challengesDir, args.name);
-
-        // Verify the challenge exists
+        let removed: { version?: string };
         try {
-            await fs.access(challengeDir);
-        } catch {
-            this.error(`Challenge "${args.name}" is not installed.`);
+            removed = await removePackage(CHALLENGE_PACKAGE_KIND, { name: args.name, dataPath });
+        } catch (err) {
+            if (err instanceof PackageNotInstalledError || err instanceof InvalidPackageNameError) this.error(err.message);
+            throw err;
         }
 
-        // Read the installed version for the success message (best-effort)
-        let version = "";
-        try {
-            const pkg = await readChallengePackageJson(challengeDir);
-            if (pkg.version) version = `@${pkg.version}`;
-        } catch {
-            // unreadable package.json — report the name only
-        }
-
-        // Remove the challenge directory
-        await fs.rm(challengeDir, { recursive: true, force: true });
-
-        // Clean up empty @scope/ dir for scoped packages
-        if (args.name.startsWith("@")) {
-            const scopeDir = path.dirname(challengeDir);
-            try {
-                const entries = await fs.readdir(scopeDir);
-                if (entries.length === 0) {
-                    await fs.rmdir(scopeDir);
-                }
-            } catch {
-                // ignore
-            }
-        }
-
-        this.log(`removed ${args.name}${version}`);
+        this.log(`removed ${args.name}${removed.version ? `@${removed.version}` : ""}`);
 
         // Best-effort reload in the daemon at --pkcRpcUrl, so the removal takes effect
         // without a restart

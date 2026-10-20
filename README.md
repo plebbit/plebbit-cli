@@ -318,6 +318,15 @@ $ bitsocial community edit mysub.bso '--roles["author-address.bso"]' null
 * [`bitsocial daemon`](#bitsocial-daemon)
 * [`bitsocial help [COMMAND]`](#bitsocial-help-command)
 * [`bitsocial logs`](#bitsocial-logs)
+* [`bitsocial page-sort add PACKAGE`](#bitsocial-page-sort-add-package)
+* [`bitsocial page-sort i PACKAGE`](#bitsocial-page-sort-i-package)
+* [`bitsocial page-sort install PACKAGE`](#bitsocial-page-sort-install-package)
+* [`bitsocial page-sort list`](#bitsocial-page-sort-list)
+* [`bitsocial page-sort ls`](#bitsocial-page-sort-ls)
+* [`bitsocial page-sort remove NAME`](#bitsocial-page-sort-remove-name)
+* [`bitsocial page-sort rm NAME`](#bitsocial-page-sort-rm-name)
+* [`bitsocial page-sort un NAME`](#bitsocial-page-sort-un-name)
+* [`bitsocial page-sort uninstall NAME`](#bitsocial-page-sort-uninstall-name)
 * [`bitsocial update check`](#bitsocial-update-check)
 * [`bitsocial update install [VERSION]`](#bitsocial-update-install-version)
 * [`bitsocial update versions`](#bitsocial-update-versions)
@@ -696,6 +705,12 @@ EXAMPLES
       --settings.challenges[0].options.question "what is the password?" --settings.challenges[0].options.answer \
       thepassword --settings.challenges[1].name captcha-canvas-v3
 
+  Use an installed page sort package (bitsocial page-sort install @pkcprotocol/active-page-sort) as the preloaded
+  posts sort, where replies containing 'sage' do not bump a thread
+
+    $ bitsocial community edit mycommunity.bso '--settings.pages.posts[0].name' @pkcprotocol/active-page-sort \
+      '--settings.pages.posts[0].options.noBumpKeywords' sage '--settings.pages.posts[0].preloaded' true
+
   Change the title and description
 
     $ bitsocial community edit mycommunity.bso --title "This is the new title" --description "This is the new \
@@ -990,6 +1005,274 @@ EXAMPLES
 ```
 
 _See code: [src/cli/commands/logs.ts](https://github.com/bitsocialnet/bitsocial-cli/blob/v0.19.106/src/cli/commands/logs.ts)_
+
+## `bitsocial page-sort add PACKAGE`
+
+Install a page sort package (npm package name, git URL, tarball URL, or local path)
+
+```
+USAGE
+  $ bitsocial page-sort add PACKAGE --pkcRpcUrl <value> [--pkcOptions.dataPath <value>]
+
+ARGUMENTS
+  PACKAGE  Package specifier — anything npm can install (name, name@version, git URL, tarball URL, local path)
+
+FLAGS
+  --pkcOptions.dataPath=<value>  Data path to install the page sort into
+  --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
+
+DESCRIPTION
+  Install a page sort package (npm package name, git URL, tarball URL, or local path)
+
+ALIASES
+  $ bitsocial page-sort i
+  $ bitsocial page-sort add
+
+EXAMPLES
+  $ bitsocial page-sort install @pkcprotocol/active-page-sort
+
+  $ bitsocial page-sort install @pkcprotocol/active-page-sort@1.0.0
+
+  $ bitsocial page-sort install ./my-local-page-sort
+```
+
+## `bitsocial page-sort i PACKAGE`
+
+Install a page sort package (npm package name, git URL, tarball URL, or local path)
+
+```
+USAGE
+  $ bitsocial page-sort i PACKAGE --pkcRpcUrl <value> [--pkcOptions.dataPath <value>]
+
+ARGUMENTS
+  PACKAGE  Package specifier — anything npm can install (name, name@version, git URL, tarball URL, local path)
+
+FLAGS
+  --pkcOptions.dataPath=<value>  Data path to install the page sort into
+  --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
+
+DESCRIPTION
+  Install a page sort package (npm package name, git URL, tarball URL, or local path)
+
+ALIASES
+  $ bitsocial page-sort i
+  $ bitsocial page-sort add
+
+EXAMPLES
+  $ bitsocial page-sort install @pkcprotocol/active-page-sort
+
+  $ bitsocial page-sort install @pkcprotocol/active-page-sort@1.0.0
+
+  $ bitsocial page-sort install ./my-local-page-sort
+```
+
+## `bitsocial page-sort install PACKAGE`
+
+Install a page sort package (npm package name, git URL, tarball URL, or local path)
+
+```
+USAGE
+  $ bitsocial page-sort install PACKAGE --pkcRpcUrl <value> [--pkcOptions.dataPath <value>]
+
+ARGUMENTS
+  PACKAGE  Package specifier — anything npm can install (name, name@version, git URL, tarball URL, local path)
+
+FLAGS
+  --pkcOptions.dataPath=<value>  Data path to install the page sort into
+  --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
+
+DESCRIPTION
+  Install a page sort package (npm package name, git URL, tarball URL, or local path)
+
+ALIASES
+  $ bitsocial page-sort i
+  $ bitsocial page-sort add
+
+EXAMPLES
+  $ bitsocial page-sort install @pkcprotocol/active-page-sort
+
+  $ bitsocial page-sort install @pkcprotocol/active-page-sort@1.0.0
+
+  $ bitsocial page-sort install ./my-local-page-sort
+```
+
+_See code: [src/cli/commands/page-sort/install.ts](https://github.com/bitsocialnet/bitsocial-cli/blob/v0.19.106/src/cli/commands/page-sort/install.ts)_
+
+## `bitsocial page-sort list`
+
+List installed page sort packages
+
+```
+USAGE
+  $ bitsocial page-sort list [-q] [--pkcOptions.dataPath <value>]
+
+FLAGS
+  -q, --quiet                        Only display page sort names
+      --pkcOptions.dataPath=<value>  Data path where page sorts are installed
+
+DESCRIPTION
+  List installed page sort packages
+
+ALIASES
+  $ bitsocial page-sort ls
+
+EXAMPLES
+  $ bitsocial page-sort list
+
+  $ bitsocial page-sort list -q
+```
+
+_See code: [src/cli/commands/page-sort/list.ts](https://github.com/bitsocialnet/bitsocial-cli/blob/v0.19.106/src/cli/commands/page-sort/list.ts)_
+
+## `bitsocial page-sort ls`
+
+List installed page sort packages
+
+```
+USAGE
+  $ bitsocial page-sort ls [-q] [--pkcOptions.dataPath <value>]
+
+FLAGS
+  -q, --quiet                        Only display page sort names
+      --pkcOptions.dataPath=<value>  Data path where page sorts are installed
+
+DESCRIPTION
+  List installed page sort packages
+
+ALIASES
+  $ bitsocial page-sort ls
+
+EXAMPLES
+  $ bitsocial page-sort list
+
+  $ bitsocial page-sort list -q
+```
+
+## `bitsocial page-sort remove NAME`
+
+Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is passed
+
+```
+USAGE
+  $ bitsocial page-sort remove NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
+
+ARGUMENTS
+  NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
+
+FLAGS
+  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --pkcOptions.dataPath=<value>  Data path where page sorts are installed
+  --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
+
+DESCRIPTION
+  Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is
+  passed
+
+ALIASES
+  $ bitsocial page-sort uninstall
+  $ bitsocial page-sort rm
+  $ bitsocial page-sort un
+
+EXAMPLES
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort
+
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort --force
+```
+
+_See code: [src/cli/commands/page-sort/remove.ts](https://github.com/bitsocialnet/bitsocial-cli/blob/v0.19.106/src/cli/commands/page-sort/remove.ts)_
+
+## `bitsocial page-sort rm NAME`
+
+Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is passed
+
+```
+USAGE
+  $ bitsocial page-sort rm NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
+
+ARGUMENTS
+  NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
+
+FLAGS
+  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --pkcOptions.dataPath=<value>  Data path where page sorts are installed
+  --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
+
+DESCRIPTION
+  Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is
+  passed
+
+ALIASES
+  $ bitsocial page-sort uninstall
+  $ bitsocial page-sort rm
+  $ bitsocial page-sort un
+
+EXAMPLES
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort
+
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort --force
+```
+
+## `bitsocial page-sort un NAME`
+
+Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is passed
+
+```
+USAGE
+  $ bitsocial page-sort un NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
+
+ARGUMENTS
+  NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
+
+FLAGS
+  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --pkcOptions.dataPath=<value>  Data path where page sorts are installed
+  --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
+
+DESCRIPTION
+  Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is
+  passed
+
+ALIASES
+  $ bitsocial page-sort uninstall
+  $ bitsocial page-sort rm
+  $ bitsocial page-sort un
+
+EXAMPLES
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort
+
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort --force
+```
+
+## `bitsocial page-sort uninstall NAME`
+
+Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is passed
+
+```
+USAGE
+  $ bitsocial page-sort uninstall NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
+
+ARGUMENTS
+  NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
+
+FLAGS
+  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --pkcOptions.dataPath=<value>  Data path where page sorts are installed
+  --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
+
+DESCRIPTION
+  Remove an installed page sort package. Refuses while a community's settings.pages still names it, unless --force is
+  passed
+
+ALIASES
+  $ bitsocial page-sort uninstall
+  $ bitsocial page-sort rm
+  $ bitsocial page-sort un
+
+EXAMPLES
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort
+
+  $ bitsocial page-sort remove @pkcprotocol/active-page-sort --force
+```
 
 ## `bitsocial update check`
 

@@ -25,6 +25,16 @@ describe("challengeReloadUrlFromPkcRpcUrl", () => {
         expect(challengeReloadUrlFromPkcRpcUrl("ws://[::1]:9138")).toBe("http://[::1]:9138/api/challenges/reload");
     });
 
+    // A remote daemon is reached through its auth-key path; the bare /api/... route is local-only (403 otherwise)
+    it("keeps the auth key path of a remote RPC url", () => {
+        expect(challengeReloadUrlFromPkcRpcUrl("ws://example.com:9138/secretkey")).toBe("http://example.com:9138/secretkey/api/challenges/reload");
+        expect(challengeReloadUrlFromPkcRpcUrl("ws://example.com:9138/secretkey/")).toBe("http://example.com:9138/secretkey/api/challenges/reload");
+    });
+
+    it("maps wss to https", () => {
+        expect(challengeReloadUrlFromPkcRpcUrl("wss://example.com:9443/secretkey")).toBe("https://example.com:9443/secretkey/api/challenges/reload");
+    });
+
     it("returns undefined for unusable urls", () => {
         expect(challengeReloadUrlFromPkcRpcUrl("not a url")).toBeUndefined();
         expect(challengeReloadUrlFromPkcRpcUrl("ws://localhost")).toBeUndefined(); // no port

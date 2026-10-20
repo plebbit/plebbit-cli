@@ -7,7 +7,9 @@ import fs from "fs/promises";
 import { PKCLogger } from "../util.js";
 import { randomBytes } from "crypto";
 import express from "express";
-import { loadChallengesIntoPKC, formatChallengeNameVersion } from "../challenge-packages/challenge-utils.js";
+import { loadChallengesIntoPKC, CHALLENGE_PACKAGE_KIND } from "../challenge-packages/challenge-utils.js";
+import { loadPageSortsIntoPKC, PAGE_SORT_PACKAGE_KIND } from "../page-sort-packages/page-sort-utils.js";
+import { formatPackageNameVersion, type InstalledPackage, type PackageKind } from "../common-utils/package-registry.js";
 
 const rootHashRedirectScriptPattern =
     /<script\b[^>]*>(?:(?!<\/script>)[\s\S])*?window\.location\.replace\(["']\/#["']\s*\+\s*window\.location\.pathname\s*\+\s*window\.location\.search\);(?:(?!<\/script>)[\s\S])*?<\/script>/;
@@ -161,43 +163,45 @@ export async function startDaemonServer(
         webuis.push({ name: webuiName, endpointLocal, endpointRemote });
     }
 
-    // Challenge reload endpoints
-    const handleChallengeReload = async (_req: express.Request, res: express.Response) => {
-        try {
-            const loadedChallenges = await loadChallengesIntoPKC(pkcOptions.dataPath);
-            // Notify all connected RPC clients about the updated challenges
-            const onSettingsChange = (rpcServer as any)._onSettingsChange;
-            if (onSettingsChange) {
-                for (const connectionId of Object.keys(onSettingsChange)) {
-                    const handlers = onSettingsChange[connectionId];
-                    if (!handlers) continue;
-                    for (const subscriptionId of Object.keys(handlers)) {
-                        const handler = handlers[subscriptionId];
-                        if (handler) await handler({ newPKC: (rpcServer as any).pkc });
-                    }
-                }
+    // Package reload endpoints: `challenge install/remove` and `page-sort install/remove` POST here so a running
+    // daemon picks the change up without a restart
+    const registerPackageReloadEndpoints = (
+        kind: PackageKind,
+        load: (dataPath?: string) => Promise<InstalledPackage[]>,
+        responseKey: string
+    ) => {
+        const handleReload = async (_req: express.Request, res: express.Response) => {
+            try {
+                const loaded = await load(pkcOptions.dataPath);
+                // Re-send `settingschange` to settings subscribers only, so connected clients see the new registry.
+                // Running communities pick the change up on their next cycle (pkc-js#411); nothing is restarted
+                // (issue #171: looping over the server's private _onSettingsChange handlers restarted every community).
+                await rpcServer.notifySettingsChange();
+                res.json({ ok: true, [responseKey]: loaded.map(formatPackageNameVersion) });
+            } catch (err) {
+                log.error(`Failed to reload ${kind.label} packages`, err);
+                res.status(500).json({ ok: false, error: String(err) });
             }
-            res.json({ ok: true, challenges: loadedChallenges.map(formatChallengeNameVersion) });
-        } catch (err) {
-            log.error("Failed to reload challenges", err);
-            res.status(500).json({ ok: false, error: String(err) });
-        }
+        };
+
+        // Local-only endpoint (same isLocal check as webui routes)
+        webuiExpressApp.post(`/api/${kind.subdir}/reload`, (req, res) => {
+            const isLocal = req.socket.localAddress && req.socket.localAddress === req.socket.remoteAddress;
+            if (!isLocal) {
+                res.status(403).send("This endpoint does not exist for remote connections");
+                return;
+            }
+            handleReload(req, res);
+        });
+
+        // Remote endpoint with auth key
+        webuiExpressApp.post(`/${rpcAuthKey}/api/${kind.subdir}/reload`, (req, res) => {
+            handleReload(req, res);
+        });
     };
 
-    // Local-only endpoint (same isLocal check as webui routes)
-    webuiExpressApp.post("/api/challenges/reload", (req, res) => {
-        const isLocal = req.socket.localAddress && req.socket.localAddress === req.socket.remoteAddress;
-        if (!isLocal) {
-            res.status(403).send("This endpoint does not exist for remote connections");
-            return;
-        }
-        handleChallengeReload(req, res);
-    });
-
-    // Remote endpoint with auth key
-    webuiExpressApp.post(`/${rpcAuthKey}/api/challenges/reload`, (req, res) => {
-        handleChallengeReload(req, res);
-    });
+    registerPackageReloadEndpoints(CHALLENGE_PACKAGE_KIND, loadChallengesIntoPKC, "challenges");
+    registerPackageReloadEndpoints(PAGE_SORT_PACKAGE_KIND, loadPageSortsIntoPKC, "pageSorts");
 
     let daemonServerDestroyed = false;
 

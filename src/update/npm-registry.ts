@@ -1,5 +1,5 @@
 import { spawn } from "child_process";
-import { getNpmCliPath, getNpmEnv, ensureNpmAvailable } from "../challenge-packages/challenge-utils.js";
+import { getNpmCliPath, getNpmEnv, ensureNpmAvailable } from "../common-utils/npm.js";
 
 export const PACKAGE_NAME = "@bitsocial/bitsocial-cli";
 

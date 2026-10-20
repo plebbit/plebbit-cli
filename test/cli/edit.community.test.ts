@@ -112,6 +112,27 @@ describe("bitsocial community edit", () => {
 
     // Setting boolean fields
 
+    // The README example for installed page sort packages (issue #164)
+    it(`Can configure settings.pages with a page sort package name, string options and a boolean`, async () => {
+        const { result } = await runCliCommand([
+            "community",
+            "edit",
+            "plebbit.bso",
+            "--settings.pages.posts[0].name",
+            "@pkcprotocol/active-page-sort",
+            "--settings.pages.posts[0].options.noBumpKeywords",
+            "sage",
+            "--settings.pages.posts[0].preloaded",
+            "true"
+        ]);
+        expect(result.error).toBeUndefined();
+        const mergedEditOptions = <CommunityEditOptions>editFake.args[0][0];
+        expect(mergedEditOptions.settings?.pages?.posts).toEqual([
+            { name: "@pkcprotocol/active-page-sort", options: { noBumpKeywords: "sage" }, preloaded: true }
+        ]);
+        expect(mergedEditOptions.settings?.challenges).toEqual(currentSubProps.settings?.challenges); // untouched
+    });
+
     it(`Can set a boolean field to true on first level (implicit)`, async () => {
         const { result } = await runEditCommand("community edit plebbit.bso --randomBooleanField");
         expect(result.error).toBeUndefined();

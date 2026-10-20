@@ -5,7 +5,7 @@ import path from "node:path";
 import { Readable } from "node:stream";
 import { finished as streamFinished } from "node:stream/promises";
 import decompress from "decompress";
-import { runNpmPack, ensureNpmAvailable } from "../challenge-packages/challenge-utils.js";
+import { runNpmPack, ensureNpmAvailable } from "../common-utils/npm.js";
 import { PACKAGE_NAME } from "./npm-registry.js";
 
 interface WebuiEntry {
