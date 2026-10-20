@@ -99,7 +99,7 @@ Quote the flags in the shell: the `[0]` brackets are glob characters, and zsh re
 bitsocial page-sort remove @pkcprotocol/active-page-sort
 ```
 
-Before deleting, `remove` connects to the daemon at `--pkcRpcUrl` and checks every community's `settings.pages`. If any entry names the package, it refuses and lists them (oclif prefixes each output line with ` ›   `):
+`remove` first checks that the package is installed, without contacting the daemon. Then it connects to the daemon at `--pkcRpcUrl` and checks every community's `settings.pages`. If any entry names the package, it refuses and lists them (oclif prefixes each output line with ` ›   `):
 
 ```
 Error: Page sort "@pkcprotocol/active-page-sort" is still used by:
@@ -111,7 +111,7 @@ or pass --force to remove it anyway (the communities keep publishing without thi
 The reason: a community whose `settings.pages` names a missing sort keeps publishing but skips that entry and logs an error on every start, so the board silently loses the sort.
 
 - **The daemon must be running** for the check. If it cannot be reached, `remove` refuses and says so.
-- **`--force`** skips the check, both for in-use packages and for an unreachable daemon.
+- **`--force`** skips the check and doesn't contact the daemon for it. After removing, it prints a warning that any community still naming the package keeps publishing without this sort.
 
 ## Troubleshooting
 

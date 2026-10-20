@@ -257,15 +257,20 @@ export async function installPackage(
 
 export class PackageNotInstalledError extends Error {}
 
-/** Remove ${dataPath}/<subdir>/<name>. Returns the removed version, if its package.json was readable. */
-export async function removePackage(kind: PackageKind, { name, dataPath }: { name: string; dataPath: string }): Promise<{ version?: string }> {
+/** Throw PackageNotInstalledError unless ${dataPath}/<subdir>/<name> exists. Returns that directory. */
+export async function assertPackageInstalled(kind: PackageKind, { name, dataPath }: { name: string; dataPath: string }): Promise<string> {
     const packageDir = packageNameToDir(getPackagesDir(kind, dataPath), name);
-
     try {
         await fs.access(packageDir);
     } catch {
         throw new PackageNotInstalledError(`${kind.label[0].toUpperCase()}${kind.label.slice(1)} "${name}" is not installed.`);
     }
+    return packageDir;
+}
+
+/** Remove ${dataPath}/<subdir>/<name>. Returns the removed version, if its package.json was readable. */
+export async function removePackage(kind: PackageKind, { name, dataPath }: { name: string; dataPath: string }): Promise<{ version?: string }> {
+    const packageDir = await assertPackageInstalled(kind, { name, dataPath });
 
     // Read the installed version for the success message (best-effort)
     let version: string | undefined;
@@ -291,6 +296,31 @@ export async function removePackage(kind: PackageKind, { name, dataPath }: { nam
     }
 
     return { version };
+}
+
+/** The part of a connected pkc-js RPC client that collectPackageUsages reads. */
+export interface PackageUsageSource {
+    communities: string[];
+    createCommunity(options: { address: string }): Promise<{ settings?: unknown }>;
+    destroy(): Promise<void>;
+}
+
+/**
+ * Every place a community on the daemon names a package, as "<address> <usage>". `findUsages` maps one community's
+ * settings to the usages within it, e.g. ["settings.challenges[1]"]. Stopped communities are checked too, since they
+ * load the package on their next start. Destroys `pkc` when done.
+ */
+export async function collectPackageUsages(pkc: PackageUsageSource, findUsages: (settings: any) => string[]): Promise<string[]> {
+    const usages: string[] = [];
+    try {
+        for (const address of pkc.communities) {
+            const community = await pkc.createCommunity({ address });
+            for (const usage of findUsages(community.settings)) usages.push(`${address} ${usage}`);
+        }
+    } finally {
+        await pkc.destroy();
+    }
+    return usages;
 }
 
 /**
@@ -412,6 +442,17 @@ export async function importPackageFactory(kind: PackageKind, packageDir: string
  * A process serves one data path (the daemon passes its own), so this is not keyed by data path.
  */
 const shadowedByRegistry = new Map<PackageKind["registryKey"], Map<string, { hadPrevious: boolean; previous: unknown }>>();
+
+/**
+ * Whether pkc-js itself ships `name` in the `kind` registry, so removing a package of that name hands the built-in
+ * back instead of leaving the name unregistered. Holds in the daemon too, where the package may shadow the built-in.
+ */
+export async function isBuiltInPackageName(kind: PackageKind, name: string): Promise<boolean> {
+    const shadowed = shadowedByRegistry.get(kind.registryKey)?.get(name);
+    if (shadowed) return shadowed.hadPrevious;
+    const PKC = await import("@pkcprotocol/pkc-js");
+    return Object.hasOwn((PKC.default as any)[kind.registryKey] ?? {}, name);
+}
 
 export async function loadPackagesIntoPKC(kind: PackageKind, dataPath?: string): Promise<InstalledPackage[]> {
     const packages = await listInstalledPackages(kind, dataPath);

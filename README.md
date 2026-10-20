@@ -487,21 +487,24 @@ EXAMPLES
 
 ## `bitsocial challenge remove NAME`
 
-Remove an installed challenge package
+Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force is passed
 
 ```
 USAGE
-  $ bitsocial challenge remove NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>]
+  $ bitsocial challenge remove NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
 
 ARGUMENTS
   NAME  The challenge package name (e.g., my-challenge or @scope/my-challenge)
 
 FLAGS
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where challenges are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 
 DESCRIPTION
-  Remove an installed challenge package
+  Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force
+  is passed
 
 ALIASES
   $ bitsocial challenge uninstall
@@ -512,27 +515,32 @@ EXAMPLES
   $ bitsocial challenge remove my-challenge
 
   $ bitsocial challenge remove @scope/my-challenge
+
+  $ bitsocial challenge remove my-challenge --force
 ```
 
 _See code: [src/cli/commands/challenge/remove.ts](https://github.com/bitsocialnet/bitsocial-cli/blob/v0.19.109/src/cli/commands/challenge/remove.ts)_
 
 ## `bitsocial challenge rm NAME`
 
-Remove an installed challenge package
+Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force is passed
 
 ```
 USAGE
-  $ bitsocial challenge rm NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>]
+  $ bitsocial challenge rm NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
 
 ARGUMENTS
   NAME  The challenge package name (e.g., my-challenge or @scope/my-challenge)
 
 FLAGS
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where challenges are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 
 DESCRIPTION
-  Remove an installed challenge package
+  Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force
+  is passed
 
 ALIASES
   $ bitsocial challenge uninstall
@@ -543,25 +551,30 @@ EXAMPLES
   $ bitsocial challenge remove my-challenge
 
   $ bitsocial challenge remove @scope/my-challenge
+
+  $ bitsocial challenge remove my-challenge --force
 ```
 
 ## `bitsocial challenge un NAME`
 
-Remove an installed challenge package
+Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force is passed
 
 ```
 USAGE
-  $ bitsocial challenge un NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>]
+  $ bitsocial challenge un NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
 
 ARGUMENTS
   NAME  The challenge package name (e.g., my-challenge or @scope/my-challenge)
 
 FLAGS
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where challenges are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 
 DESCRIPTION
-  Remove an installed challenge package
+  Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force
+  is passed
 
 ALIASES
   $ bitsocial challenge uninstall
@@ -572,25 +585,30 @@ EXAMPLES
   $ bitsocial challenge remove my-challenge
 
   $ bitsocial challenge remove @scope/my-challenge
+
+  $ bitsocial challenge remove my-challenge --force
 ```
 
 ## `bitsocial challenge uninstall NAME`
 
-Remove an installed challenge package
+Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force is passed
 
 ```
 USAGE
-  $ bitsocial challenge uninstall NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>]
+  $ bitsocial challenge uninstall NAME --pkcRpcUrl <value> [--pkcOptions.dataPath <value>] [--force]
 
 ARGUMENTS
   NAME  The challenge package name (e.g., my-challenge or @scope/my-challenge)
 
 FLAGS
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where challenges are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 
 DESCRIPTION
-  Remove an installed challenge package
+  Remove an installed challenge package. Refuses while a community's settings.challenges still names it, unless --force
+  is passed
 
 ALIASES
   $ bitsocial challenge uninstall
@@ -601,6 +619,8 @@ EXAMPLES
   $ bitsocial challenge remove my-challenge
 
   $ bitsocial challenge remove @scope/my-challenge
+
+  $ bitsocial challenge remove my-challenge --force
 ```
 
 ## `bitsocial community create`
@@ -1160,7 +1180,8 @@ ARGUMENTS
   NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
 
 FLAGS
-  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where page sorts are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 
@@ -1193,7 +1214,8 @@ ARGUMENTS
   NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
 
 FLAGS
-  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where page sorts are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 
@@ -1224,7 +1246,8 @@ ARGUMENTS
   NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
 
 FLAGS
-  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where page sorts are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 
@@ -1255,7 +1278,8 @@ ARGUMENTS
   NAME  The page sort package name (e.g., my-page-sort or @scope/my-page-sort)
 
 FLAGS
-  --force                        Remove even if communities still use it, or if the daemon cannot be reached to check
+  --force                        Remove without checking whether communities still use it (the daemon is not contacted
+                                 for the check)
   --pkcOptions.dataPath=<value>  Data path where page sorts are installed
   --pkcRpcUrl=<value>            (required) [default: ws://localhost:9138/] URL to PKC RPC
 

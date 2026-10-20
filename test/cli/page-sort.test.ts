@@ -173,13 +173,19 @@ describe("bitsocial page-sort install / list / remove", () => {
         ]);
         expect(remove.exitCode).toBe(0);
         expect(remove.stdout).toContain("removed @test-scope/scoped-page-sort@2.0.0");
+        // oclif wraps warnings at the terminal width and prefixes each line with "›" ("»" on Windows)
+        expect(remove.stderr.replace(/[›»]/g, " ").replace(/\s+/g, " ")).toContain(
+            'Skipped the in-use check. A community whose settings.pages still names "@test-scope/scoped-page-sort" keeps publishing without this sort.'
+        );
         expect(fs.existsSync(path.join(dataPath, "page-sorts", "@test-scope"))).toBe(false);
     });
 
-    it("errors on a page sort that is not installed", async () => {
-        const remove = await runBitsocialPageSort(["remove", "nope", "--force", "--pkcOptions.dataPath", randomDirectory()]);
+    // Checked before the daemon, so the error names the real problem rather than an unreachable daemon
+    it("errors on a page sort that is not installed without contacting the daemon", async () => {
+        const remove = await runBitsocialPageSort(["remove", "nope", "--pkcOptions.dataPath", randomDirectory(), "--pkcRpcUrl", NO_DAEMON_RPC_URL]);
         expect(remove.exitCode).not.toBe(0);
         expect(remove.stderr).toContain('Page sort "nope" is not installed.');
+        expect(remove.stderr).not.toContain("Could not check");
     });
 });
 

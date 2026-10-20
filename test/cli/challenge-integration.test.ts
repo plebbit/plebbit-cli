@@ -106,6 +106,7 @@ async function publishCommentWithChallenge(opts: {
     challengeSuccess: boolean;
     challengeText?: string;
     challengeErrors?: (string | undefined)[];
+    reason?: string;
 }> {
     const { pkc, communityAddress, challengeAnswer, timeoutMs = 60000 } = opts;
     const signer = await pkc.createSigner();
@@ -138,7 +139,8 @@ async function publishCommentWithChallenge(opts: {
             resolve({
                 challengeSuccess: verification.challengeSuccess,
                 challengeText,
-                challengeErrors: verification.challengeErrors
+                challengeErrors: verification.challengeErrors,
+                reason: verification.reason
             });
         });
 
@@ -509,6 +511,65 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
                     /* ignore */
                 }
             }
+        });
+    });
+
+    // Issue #176: `challenge remove` deletes a package that a community's settings.challenges still names
+    describe("challenge remove while a community uses the package", () => {
+        it("refuses and lists every community entry that names the package", { timeout: 180_000 }, async () => {
+            const name = "test-in-use-challenge";
+            const srcDir = path.join(randomDirectory(), name);
+            await createMinimalChallengeDir(srcDir, name, {});
+            const install = await runBitsocialChallenge(["install", srcDir, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl]);
+            expect(install.exitCode).toBe(0);
+
+            const sub = await pkc.createCommunity();
+            await sub.edit({ settings: { challenges: [{ name: "question", options: { question: "q?", answer: "a" } }, { name }] } });
+
+            const refused = await runBitsocialChallenge(["remove", name, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl]);
+            expect(refused.exitCode).not.toBe(0);
+            // oclif wraps error output at the terminal width and prefixes each line with "›" ("»" on Windows)
+            const refusal = refused.stderr.replace(/[›»]/g, " ").replace(/\s+/g, " ");
+            expect(refusal).toContain(`${sub.address} settings.challenges[1]`);
+            expect(fsSync.existsSync(path.join(dataPath, "challenges", name))).toBe(true);
+        });
+
+        // What the refusal guards against. The package is removed the way `challenge remove` does it (delete the
+        // directory, then reload the daemon), so this keeps holding once the command refuses
+        it("a community whose challenge package is gone rejects every publication and cannot start again", { timeout: 180_000 }, async () => {
+            const name = "test-removed-challenge";
+            const srcDir = path.join(randomDirectory(), name);
+            await createMinimalChallengeDir(srcDir, name, { challenge: "7+7", answer: "14" });
+            const install = await runBitsocialChallenge(["install", srcDir, "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", rpcWsUrl]);
+            expect(install.exitCode).toBe(0);
+
+            const sub = await pkc.createCommunity();
+            await sub.edit({ settings: { challenges: [{ name }] } });
+            // Once the package is gone, pkc-js with pkcprotocol/pkc-js#429 emits ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD
+            // on the running community; an unhandled "error" event would throw
+            sub.on("error", () => {});
+            await sub.start();
+            expect(await waitForCondition(() => !!(sub as any).updatedAt, 60000, 500)).toBe(true);
+
+            await fsPromise.rm(path.join(dataPath, "challenges", name), { recursive: true });
+            const reloadRes = await fetch(`http://localhost:${RPC_PORT}/api/challenges/reload`, { method: "POST" });
+            expect(reloadRes.status).toBe(200);
+
+            // The published record still advertises the challenge, but no answer can pass it
+            expect(sub.challenges).toEqual([{ challenge: "7+7", type: "text/plain" }]);
+            const result = await publishCommentWithChallenge({ pkc, communityAddress: sub.address, challengeAnswer: "14" });
+            expect(result.challengeSuccess).toBe(false);
+            expect(result.reason).toContain("One of the community challenges is misconfigured");
+
+            // A restart (or a daemon restart) can't load the challenge, so the community goes offline. pkc-js keeps that
+            // on purpose but names the error (pkcprotocol/pkc-js#429): once a release with it is installed, start()
+            // rejects with ERR_COMMUNITY_CHALLENGES_FAILED_TO_LOAD and the publish reason above names the challenge, so
+            // update these assertions in that bump
+            await sub.stop();
+            const restarted = await pkc.createCommunity({ address: sub.address });
+            restarted.on("error", () => {});
+            await expect(restarted.start()).rejects.toThrow(/expected function, received undefined/);
+            expect(await waitForCondition(() => restarted.startedState === "failed", 20000, 200)).toBe(true);
         });
     });
 
