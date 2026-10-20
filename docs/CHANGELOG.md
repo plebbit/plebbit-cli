@@ -1,5 +1,11 @@
 # Changelog
 
+## <small>0.19.110 (2026-10-20)</small>
+
+* test: handle the running community's error event and point the e2e assertions at pkc-js#429 ([af35719](https://github.com/bitsocialnet/bitsocial-cli/commit/af35719)), closes [pkc-js#429](https://github.com/pkc-js/issues/429)
+* test: reproduce challenge remove deleting a package a community still uses ([4e954b7](https://github.com/bitsocialnet/bitsocial-cli/commit/4e954b7))
+* fix: refuse challenge remove while a community's settings.challenges still uses the package ([9a6b6ff](https://github.com/bitsocialnet/bitsocial-cli/commit/9a6b6ff))
+
 ## <small>0.19.109 (2026-10-20)</small>
 
 * fix: quote bracketed flags in command examples and replace the stale captcha-canvas-v3 challenge ([b165c8c](https://github.com/bitsocialnet/bitsocial-cli/commit/b165c8c))
