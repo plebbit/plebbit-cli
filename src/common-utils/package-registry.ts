@@ -1,6 +1,7 @@
 import path from "path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import fs from "fs/promises";
 import type { Dirent } from "fs";
 import decompress from "decompress";
@@ -391,6 +392,12 @@ export async function importPackageFactory(kind: PackageKind, packageDir: string
     // Packages are expected to ship a bundled entry point.
     const entryUrl = pathToFileURL(entryPath);
     entryUrl.searchParams.set(kind.cacheBustParam, await hashPackageContents(packageDir));
+
+    // A CommonJS entry is also cached by filename, and Node's ESM loader reuses that cached
+    // module for a new URL, so drop it or the content-hash query alone hands back the old
+    // exports.  An unchanged package keeps its URL, which the ESM cache answers without
+    // touching require.cache, so its factory stays identical.
+    delete createRequire(import.meta.url).cache[entryPath];
 
     const imported = await import(entryUrl.href);
     return imported.default || imported;

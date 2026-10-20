@@ -2,6 +2,9 @@ import { describe, it, expect } from "vitest";
 import { directory as randomDirectory } from "tempy";
 import fsPromise from "fs/promises";
 import path from "path";
+import { pathToFileURL } from "url";
+import { execFile } from "child_process";
+import { promisify } from "util";
 import PKC from "@pkcprotocol/pkc-js";
 import { loadChallengesIntoPKC, hashChallengePackageContents } from "../../src/challenge-packages/challenge-utils.js";
 
@@ -11,6 +14,8 @@ import { loadChallengesIntoPKC, hashChallengePackageContents } from "../../src/c
 // running the previously evaluated module even though package.json reports the new version.
 
 const CHALLENGE_NAME = "test-challenge-module-cache";
+
+const execFileAsync = promisify(execFile);
 
 const writeChallengePackage = async (
     dir: string,
@@ -139,6 +144,60 @@ describe("loadChallengesIntoPKC module cache", { timeout: 60_000 }, () => {
         await installDotPathEntry("3+3");
         await loadChallengesIntoPKC(dataPath);
         expect(getActiveChallengeText()).toBe("3+3");
+    });
+
+    // The content-hash query busts Node's ESM URL cache, but a CommonJS entry is also cached by
+    // filename in require.cache, so the new URL still handed back the previously evaluated exports.
+    // Vitest's module runner intercepts the dynamic import and hides this, so these run the built
+    // loader in a plain node process, the same way the daemon does.
+    describe("CommonJS entry", () => {
+        const challengeUtilsUrl = pathToFileURL(path.resolve("dist/challenge-packages/challenge-utils.js")).href;
+
+        // Each step installs (or keeps) a CommonJS package, reloads, and reports the active challenge
+        // text and whether the factory is the same object as the previous step's
+        const runReloads = async (steps: { challenge: string; reinstall: boolean }[]) => {
+            const dataPath = randomDirectory();
+            const script = `
+import fs from "fs/promises";
+import path from "path";
+import PKC from "@pkcprotocol/pkc-js";
+import { loadChallengesIntoPKC } from ${JSON.stringify(challengeUtilsUrl)};
+const dir = path.join(${JSON.stringify(dataPath)}, "challenges", ${JSON.stringify(CHALLENGE_NAME)});
+const results = [];
+let previousFactory;
+for (const step of ${JSON.stringify(steps)}) {
+    if (step.reinstall) {
+        await fs.rm(dir, { recursive: true, force: true });
+        await fs.mkdir(dir, { recursive: true });
+        await fs.writeFile(path.join(dir, "package.json"), JSON.stringify({ name: ${JSON.stringify(CHALLENGE_NAME)}, version: "1.0.0", type: "commonjs" }));
+        await fs.writeFile(path.join(dir, "index.js"), "module.exports = () => ({ type: 'text/plain', challenge: " + JSON.stringify(step.challenge) + " });");
+    }
+    await loadChallengesIntoPKC(${JSON.stringify(dataPath)});
+    const factory = PKC.challenges[${JSON.stringify(CHALLENGE_NAME)}];
+    results.push({ challenge: factory({}).challenge, sameFactory: factory === previousFactory });
+    previousFactory = factory;
+}
+console.log(JSON.stringify(results));
+`;
+            const { stdout } = await execFileAsync(process.execPath, ["--input-type=module", "-e", script], { cwd: process.cwd() });
+            return JSON.parse(stdout.trim().split("\n").pop()!) as { challenge: string; sameFactory: boolean }[];
+        };
+
+        it("activates the new code when the package is replaced", async () => {
+            const results = await runReloads([
+                { challenge: "1+1", reinstall: true },
+                { challenge: "3+3", reinstall: true }
+            ]);
+            expect(results.map((r) => r.challenge)).toEqual(["1+1", "3+3"]);
+        });
+
+        it("keeps the same factory when reloading unchanged contents", async () => {
+            const results = await runReloads([
+                { challenge: "4+4", reinstall: true },
+                { challenge: "4+4", reinstall: false }
+            ]);
+            expect(results[1]).toEqual({ challenge: "4+4", sameFactory: true });
+        });
     });
 });
 
