@@ -82,10 +82,12 @@ Options go under `settings.challenges[i].options`:
 
 ```bash
 bitsocial community edit mycommunity.bso \
-  --settings.challenges[0].name question \
-  --settings.challenges[0].options.question "what is the password?" \
-  --settings.challenges[0].options.answer thepassword
+  '--settings.challenges[0].name' question \
+  '--settings.challenges[0].options.question' "what is the password?" \
+  '--settings.challenges[0].options.answer' thepassword
 ```
+
+Quote the flags in the shell: the `[0]` brackets are glob characters, and zsh refuses to run the command when they match no file.
 
 For larger changes, write the settings to a file and pass `--jsonFile <file>`; CLI flags take priority over the file.
 

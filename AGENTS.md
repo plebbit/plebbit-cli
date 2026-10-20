@@ -114,7 +114,7 @@ Routine live operations are not repository feature work:
 
 ### Docs
 
-- **MUST** add an entry to `docs/README.md` when adding a markdown file under `docs/`, and a row to the Docs Lookup table above if the doc maps to source paths.
+- **MUST** add an entry to `docs/README.md` when adding a topic doc (any markdown file under `docs/` other than `docs/README.md` itself and the generated `docs/CHANGELOG.md`), and a row to the Docs Lookup table above if the doc maps to source paths.
 
 ## Core SHOULD Rules
 

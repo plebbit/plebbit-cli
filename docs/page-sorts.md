@@ -91,7 +91,7 @@ Fields of each entry:
 | `preloaded` | Embed the first page in the record. The first preloaded entry is the client's default sort |
 | `privateOptions` | Option names withheld from the public `community.pageSorts`. Reserved options cannot be private |
 
-Quote the flags in the shell: the `[0]` brackets are glob characters.
+Quote the flags in the shell: the `[0]` brackets are glob characters, and zsh refuses to run the command when they match no file.
 
 ## Removing
 
