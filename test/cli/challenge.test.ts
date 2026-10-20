@@ -1,11 +1,15 @@
 import { ChildProcess, spawn, execSync } from "child_process";
-import { describe, it, beforeAll, afterAll, expect } from "vitest";
+import { describe, it, beforeAll, afterAll, afterEach, expect } from "vitest";
+//@ts-ignore
+import Sinon from "sinon";
 import { directory as randomDirectory } from "tempy";
 import fsPromise from "fs/promises";
 import fs from "fs";
 import path from "path";
 import dns from "node:dns";
-import { ensureNpmAvailable } from "../../src/challenge-packages/challenge-utils.js";
+import { ensureNpmAvailable, findChallengeUsages } from "../../src/challenge-packages/challenge-utils.js";
+import { clearPkcRpcConnectOverride, setPkcRpcConnectOverride } from "../helpers/pkc-test-overrides.js";
+import { runCliCommand } from "../helpers/run-cli.js";
 dns.setDefaultResultOrder("ipv4first");
 
 // Helper to create a minimal challenge package directory
@@ -357,6 +361,12 @@ describe("bitsocial challenge list", () => {
     });
 });
 
+// No daemon listens on this port, so remove's in-use check cannot connect
+const NO_DAEMON_RPC_URL = "ws://127.0.0.1:1";
+
+// oclif wraps warnings and errors at the terminal width and prefixes each line with "›" ("»" on Windows)
+const unwrap = (output: string) => output.replace(/[›»]/g, " ").replace(/\s+/g, " ");
+
 describe("bitsocial challenge remove", () => {
     it("refuses a name that escapes the challenges dir instead of deleting another data dir", async () => {
         const dataPath = randomDirectory();
@@ -369,14 +379,37 @@ describe("bitsocial challenge remove", () => {
         expect(fs.existsSync(communityDb)).toBe(true);
     });
 
-    it("removes an installed challenge", async () => {
+    it("refuses to remove when the daemon cannot be reached to check usage", async () => {
         const dataPath = randomDirectory();
         const challengeDir = path.join(dataPath, "challenges", "test-challenge");
         await createMinimalChallengeDir(challengeDir, "test-challenge", { version: "1.0.0" });
 
-        const result = await runBitsocialChallenge(["remove", "test-challenge", "--pkcOptions.dataPath", dataPath]);
+        const result = await runBitsocialChallenge(["remove", "test-challenge", "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", NO_DAEMON_RPC_URL]);
+        expect(result.exitCode).not.toBe(0);
+        expect(unwrap(result.stderr)).toContain('Could not check whether any community uses "test-challenge"');
+        expect(result.stderr).toContain("--force");
+        expect(fs.existsSync(challengeDir)).toBe(true);
+    });
+
+    it("removes with --force without contacting the daemon, and warns that the check was skipped", async () => {
+        const dataPath = randomDirectory();
+        const challengeDir = path.join(dataPath, "challenges", "test-challenge");
+        await createMinimalChallengeDir(challengeDir, "test-challenge", { version: "1.0.0" });
+
+        const result = await runBitsocialChallenge([
+            "remove",
+            "test-challenge",
+            "--force",
+            "--pkcOptions.dataPath",
+            dataPath,
+            "--pkcRpcUrl",
+            NO_DAEMON_RPC_URL
+        ]);
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("removed test-challenge@1.0.0");
+        expect(unwrap(result.stderr)).toContain(
+            'Skipped the in-use check. A community whose settings.challenges still names "test-challenge" rejects every publication and fails to start'
+        );
 
         // Verify it's gone
         await expect(fsPromise.access(challengeDir)).rejects.toThrow();
@@ -390,8 +423,11 @@ describe("bitsocial challenge remove", () => {
         const result = await runBitsocialChallenge([
             "remove",
             "@test-scope/my-challenge",
+            "--force",
             "--pkcOptions.dataPath",
-            dataPath
+            dataPath,
+            "--pkcRpcUrl",
+            NO_DAEMON_RPC_URL
         ]);
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("removed @test-scope/my-challenge@1.0.0");
@@ -401,12 +437,13 @@ describe("bitsocial challenge remove", () => {
         await expect(fsPromise.access(scopeDir)).rejects.toThrow();
     });
 
-    it("errors on non-existent challenge", async () => {
+    // Checked before the daemon, so the error names the real problem rather than an unreachable daemon
+    it("errors on non-existent challenge without contacting the daemon", async () => {
         const dataPath = randomDirectory();
-        const result = await runBitsocialChallenge(["remove", "nonexistent", "--pkcOptions.dataPath", dataPath]);
+        const result = await runBitsocialChallenge(["remove", "nonexistent", "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", NO_DAEMON_RPC_URL]);
         expect(result.exitCode).not.toBe(0);
-        const combined = `${result.stdout}\n${result.stderr}`;
-        expect(combined).toContain("not installed");
+        expect(result.stderr).toContain('Challenge "nonexistent" is not installed.');
+        expect(result.stderr).not.toContain("Could not check");
     });
 
     it("works via the uninstall alias", async () => {
@@ -414,9 +451,107 @@ describe("bitsocial challenge remove", () => {
         const challengeDir = path.join(dataPath, "challenges", "test-challenge");
         await createMinimalChallengeDir(challengeDir, "test-challenge", { version: "1.0.0" });
 
-        const result = await runBitsocialChallenge(["uninstall", "test-challenge", "--pkcOptions.dataPath", dataPath]);
+        const result = await runBitsocialChallenge([
+            "uninstall",
+            "test-challenge",
+            "--force",
+            "--pkcOptions.dataPath",
+            dataPath,
+            "--pkcRpcUrl",
+            NO_DAEMON_RPC_URL
+        ]);
         expect(result.exitCode).toBe(0);
         expect(result.stdout).toContain("removed test-challenge@1.0.0");
         await expect(fsPromise.access(challengeDir)).rejects.toThrow();
+    });
+});
+
+// Issue #176: a community whose settings.challenges names a removed package rejects every publication and fails to start
+describe("bitsocial challenge remove: in-use check against the daemon", () => {
+    const sandbox = Sinon.createSandbox();
+
+    const settingsByAddress: Record<string, unknown> = {
+        "board.bso": { challenges: [{ name: "question", options: { question: "q?", answer: "a" } }, { name: "test-challenge" }] },
+        "other.bso": { challenges: [{ name: "test-challenge", exclude: [{ role: ["moderator"] }] }] },
+        // A path entry loads that file, not the registered package
+        "by-path.bso": { challenges: [{ name: "test-challenge", path: "/some/challenge.js" }] },
+        "unrelated.bso": {}
+    };
+
+    const installAt = async (dataPath: string, name: string) =>
+        createMinimalChallengeDir(path.join(dataPath, "challenges", name), name, { version: "1.0.0" });
+
+    afterEach(() => clearPkcRpcConnectOverride());
+    afterAll(() => sandbox.restore());
+
+    const fakeDaemon = (settings: Record<string, unknown>) =>
+        setPkcRpcConnectOverride(
+            sandbox.fake.resolves({
+                communities: Object.keys(settings),
+                createCommunity: async ({ address }: { address: string }) => ({ address, settings: settings[address] }),
+                destroy: async () => {}
+            })
+        );
+
+    it("findChallengeUsages reports each index that names the package, skipping path entries", () => {
+        expect(findChallengeUsages([{ name: "a" }, { name: "b" }, { name: "b", path: "/x.js" }, { name: "b" }], "b")).toEqual([
+            "challenges[1]",
+            "challenges[3]"
+        ]);
+        expect(findChallengeUsages(undefined, "b")).toEqual([]);
+    });
+
+    it("refuses and lists every community entry that names the package", async () => {
+        const dataPath = randomDirectory();
+        await installAt(dataPath, "test-challenge");
+        fakeDaemon(settingsByAddress);
+        const { result } = await runCliCommand(["challenge", "remove", "test-challenge", "--pkcOptions.dataPath", dataPath]);
+        const message = unwrap(result.error?.message ?? "");
+        expect(message).toContain('Challenge "test-challenge" is still used by:');
+        expect(message).toContain("board.bso settings.challenges[1]");
+        expect(message).toContain("other.bso settings.challenges[0]");
+        expect(message).not.toContain("by-path.bso");
+        expect(message).not.toContain("unrelated.bso");
+        expect(message).toContain("reject every publication and fail to start");
+        expect(fs.existsSync(path.join(dataPath, "challenges", "test-challenge"))).toBe(true);
+    });
+
+    it("removes when no community uses it", async () => {
+        const dataPath = randomDirectory();
+        await installAt(dataPath, "test-challenge");
+        fakeDaemon({ "unrelated.bso": {}, "by-path.bso": settingsByAddress["by-path.bso"] });
+        const { result, stdout } = await runCliCommand([
+            "challenge",
+            "remove",
+            "test-challenge",
+            "--pkcOptions.dataPath",
+            dataPath,
+            "--pkcRpcUrl",
+            NO_DAEMON_RPC_URL
+        ]);
+        expect(result.error).toBeUndefined();
+        expect(stdout).toContain("removed test-challenge@1.0.0");
+        expect(fs.existsSync(path.join(dataPath, "challenges", "test-challenge"))).toBe(false);
+    });
+
+    // Removing a package named after a pkc-js built-in hands the built-in back: nothing breaks, but the community's
+    // challenge changes, so it still refuses and says what removal would do
+    it("refuses a package that shadows a pkc-js built-in, and says it would fall back to the built-in", async () => {
+        const dataPath = randomDirectory();
+        await installAt(dataPath, "question");
+        fakeDaemon(settingsByAddress);
+        const { result } = await runCliCommand(["challenge", "remove", "question", "--pkcOptions.dataPath", dataPath]);
+        const message = unwrap(result.error?.message ?? "");
+        expect(message).toContain("board.bso settings.challenges[0]");
+        expect(message).toContain('falls back to the pkc-js built-in challenge of the same name');
+        expect(fs.existsSync(path.join(dataPath, "challenges", "question"))).toBe(true);
+    });
+
+    it("--force on a package that shadows a built-in warns that communities now use the built-in", async () => {
+        const dataPath = randomDirectory();
+        await installAt(dataPath, "question");
+        const result = await runBitsocialChallenge(["remove", "question", "--force", "--pkcOptions.dataPath", dataPath, "--pkcRpcUrl", NO_DAEMON_RPC_URL]);
+        expect(result.exitCode).toBe(0);
+        expect(unwrap(result.stderr)).toContain('still names "question" now uses the pkc-js built-in challenge of the same name');
     });
 });

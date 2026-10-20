@@ -558,7 +558,9 @@ describe("challenge integration tests", { timeout: 600_000 }, () => {
             expect(result.challengeSuccess).toBe(false);
             expect(result.reason).toContain("One of the community challenges is misconfigured");
 
-            // A restart (or a daemon restart) can't load the challenge, so the community goes offline
+            // A restart (or a daemon restart) can't load the challenge, so the community goes offline. pkc-js should report
+            // this instead of throwing, with an error that names the challenge (pkcprotocol/pkc-js#428); update these
+            // assertions when a pkc-js bump changes it
             await sub.stop();
             const restarted = await pkc.createCommunity({ address: sub.address });
             restarted.on("error", () => {});

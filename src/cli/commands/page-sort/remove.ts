@@ -1,7 +1,14 @@
 import { Args, Flags } from "@oclif/core";
 import { BaseCommand } from "../../base-command.js";
 import defaults from "../../../common-utils/defaults.js";
-import { removePackage, PackageNotInstalledError, InvalidPackageNameError, assertValidPackageName } from "../../../common-utils/package-registry.js";
+import {
+    removePackage,
+    assertPackageInstalled,
+    collectPackageUsages,
+    PackageNotInstalledError,
+    InvalidPackageNameError,
+    assertValidPackageName
+} from "../../../common-utils/package-registry.js";
 import { PAGE_SORT_PACKAGE_KIND, findPageSortUsages, reloadPageSortsInDaemon } from "../../../page-sort-packages/page-sort-utils.js";
 
 export default class Remove extends BaseCommand {
@@ -23,7 +30,7 @@ export default class Remove extends BaseCommand {
             required: false
         }),
         force: Flags.boolean({
-            description: "Remove even if communities still use it, or if the daemon cannot be reached to check",
+            description: "Remove without checking whether communities still use it (the daemon is not contacted for the check)",
             default: false
         })
     };
@@ -37,17 +44,12 @@ export default class Remove extends BaseCommand {
         const { args, flags } = await this.parse(Remove);
         const dataPath = flags["pkcOptions.dataPath"] || defaults.PKC_DATA_PATH;
 
-        try {
-            assertValidPackageName(args.name);
-        } catch (err) {
-            if (err instanceof InvalidPackageNameError) this.error(err.message);
-            throw err;
-        }
-
-        if (!flags.force) await this._refuseIfInUse(args.name, flags.pkcRpcUrl.toString());
-
         let removed: { version?: string };
         try {
+            assertValidPackageName(args.name);
+            // Checked before the daemon, so a misspelled name says so rather than that the daemon is down
+            await assertPackageInstalled(PAGE_SORT_PACKAGE_KIND, { name: args.name, dataPath });
+            if (!flags.force) await this._refuseIfInUse(args.name, flags.pkcRpcUrl.toString());
             removed = await removePackage(PAGE_SORT_PACKAGE_KIND, { name: args.name, dataPath });
         } catch (err) {
             if (err instanceof PackageNotInstalledError || err instanceof InvalidPackageNameError) this.error(err.message);
@@ -55,6 +57,10 @@ export default class Remove extends BaseCommand {
         }
 
         this.log(`removed ${args.name}${removed.version ? `@${removed.version}` : ""}`);
+        if (flags.force)
+            this.warn(
+                `Skipped the in-use check. A community whose settings.pages still names "${args.name}" keeps publishing without this sort.`
+            );
 
         // Best-effort reload in the daemon at --pkcRpcUrl, so the removal takes effect
         // without a restart
@@ -73,15 +79,9 @@ export default class Remove extends BaseCommand {
                     `Start the daemon and retry, or pass --force to remove it without checking.`
             );
         }
-        const usages: string[] = [];
-        try {
-            for (const address of pkc.communities) {
-                const community = await pkc.createCommunity({ address });
-                for (const usage of findPageSortUsages(community.settings?.pages, name)) usages.push(`${address} settings.pages.${usage}`);
-            }
-        } finally {
-            await pkc.destroy();
-        }
+        const usages = await collectPackageUsages(pkc, (settings) =>
+            findPageSortUsages(settings?.pages, name).map((usage) => `settings.pages.${usage}`)
+        );
         if (usages.length === 0) return;
         this.error(
             `Page sort "${name}" is still used by:\n` +

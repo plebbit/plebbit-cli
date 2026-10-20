@@ -61,3 +61,12 @@ export const hashChallengePackageContents = hashPackageContents;
 
 export const loadChallengesIntoPKC = (dataPath?: string): Promise<InstalledChallenge[]> =>
     loadPackagesIntoPKC(CHALLENGE_PACKAGE_KIND, dataPath);
+
+/** Where a community's settings.challenges names `challengeName`, e.g. "challenges[1]". An entry with a path loads that file instead. */
+export function findChallengeUsages(challengeSettings: { name?: string; path?: string }[] | undefined, challengeName: string): string[] {
+    const usages: string[] = [];
+    challengeSettings?.forEach((entry, index) => {
+        if (entry?.name === challengeName && !entry.path) usages.push(`challenges[${index}]`);
+    });
+    return usages;
+}

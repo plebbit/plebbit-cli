@@ -325,9 +325,10 @@ describe("challenge commands complete within 10s", () => {
         expect(result.stdout).toContain("test-challenge");
     });
 
-    it("challenge remove completes within 10s", { timeout: 30_000 }, async () => {
+    // No daemon runs here, so without --force remove would wait on the in-use check's connection (issue #176)
+    it("challenge remove --force completes within 10s", { timeout: 30_000 }, async () => {
         const result = await runBitsocialCommand(
-            ["challenge", "remove", "test-challenge", "--pkcOptions.dataPath", dataPath]
+            ["challenge", "remove", "test-challenge", "--force", "--pkcOptions.dataPath", dataPath]
         );
         expect(result.exitCode, `stderr: ${result.stderr}\nstdout: ${result.stdout}`).toBe(0);
         expect(result.stdout).toContain("removed test-challenge@1.0.0");

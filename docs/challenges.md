@@ -22,7 +22,7 @@ bitsocial challenge install https://example.com/my-challenge-1.0.0.tar.gz
 bitsocial challenge install ./my-local-challenge
 ```
 
-All three commands take `--pkcOptions.dataPath` (default: the platform data dir from `env-paths("bitsocial")`, e.g. `~/.local/share/bitsocial` on Linux). `install` and `remove` also take `--pkcRpcUrl` (default `ws://localhost:9138`) to find the daemon to reload.
+All three commands take `--pkcOptions.dataPath` (default: the platform data dir from `env-paths("bitsocial")`, e.g. `~/.local/share/bitsocial` on Linux). `install` and `remove` also take `--pkcRpcUrl` (default `ws://localhost:9138`) to find the daemon to reload (and, for `remove`, to check which communities use the package).
 
 `remove` takes the package name, not the spec you installed from: `bitsocial challenge remove @bitsocial/mintpass-challenge`.
 
@@ -93,7 +93,27 @@ For larger changes, write the settings to a file and pass `--jsonFile <file>`; C
 
 ## Removing
 
-`challenge remove` deletes the directory and reloads the daemon. It does **not** check whether a community still names the package in `settings.challenges`. Check first with `bitsocial community get <address>`. (`page-sort remove` does refuse in that case; see [page-sorts.md](page-sorts.md#removing).)
+```bash
+bitsocial challenge remove my-challenge
+```
+
+`remove` first checks that the package is installed, without contacting the daemon. Then it connects to the daemon at `--pkcRpcUrl` and checks `settings.challenges` in every community, running or stopped. If any entry names the package, it refuses and lists them (oclif prefixes each output line with ` ›   `):
+
+```
+Error: Challenge "my-challenge" is still used by:
+  - mycommunity.bso settings.challenges[1]
+Change or remove those entries first, e.g. bitsocial community edit <address> --jsonFile <file with the new settings.challenges>,
+or pass --force to remove it anyway (those communities reject every publication and fail to start until their settings are fixed).
+```
+
+Otherwise it deletes the directory and reloads the daemon.
+
+The reason: pkc-js can't load a challenge whose name is no longer registered. A running community keeps advertising the old challenge but rejects every publication (`One of the community challenges is misconfigured`), and on its next start (including a daemon restart) `start()` throws and the community stays offline until its settings are changed.
+
+- **Only `name` entries count.** An entry with a `path` loads that file, so it doesn't use the package.
+- **A package named after a pkc-js built-in** (`question`, `text-math`, `fail`, `blacklist`, `whitelist`, `publication-match`) is refused the same way. Removing it hands the built-in back, so nothing breaks, but those communities switch to the built-in challenge. The refusal says so.
+- **The daemon must be running** for the check. If it can't be reached, `remove` refuses and says so.
+- **`--force`** skips the check and doesn't contact the daemon for it. After removing, it prints a warning that any community still naming the package rejects every publication and fails to start (or, for a built-in name, that it now uses the built-in).
 
 ## Troubleshooting
 
