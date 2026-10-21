@@ -1,5 +1,11 @@
 # Changelog
 
+## <small>0.19.112 (2026-10-21)</small>
+
+* chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.119 ([f65f3b3](https://github.com/bitsocialnet/bitsocial-cli/commit/f65f3b3))
+  * pkc-js [0.0.119](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.119) (2026-10-21)
+    * feat(community): author profiles as a community configuration, with suggested.uiType ([#31](https://github.com/pkcprotocol/pkc-js/issues/31)) ([#268](https://github.com/pkcprotocol/pkc-js/issues/268)) ([1bd1b5c](https://github.com/pkcprotocol/pkc-js/commit/1bd1b5c4d2ab1141b03d34dbf98f0a5c80433cc9)), closes [#32](https://github.com/pkcprotocol/pkc-js/issues/32) [#237](https://github.com/pkcprotocol/pkc-js/issues/237) [#287](https://github.com/pkcprotocol/pkc-js/issues/287) [#294](https://github.com/pkcprotocol/pkc-js/issues/294) [#267](https://github.com/pkcprotocol/pkc-js/issues/267)
+
 ## <small>0.19.111 (2026-10-21)</small>
 
 * chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.118 ([40c0405](https://github.com/bitsocialnet/bitsocial-cli/commit/40c0405))
