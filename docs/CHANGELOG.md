@@ -1,5 +1,15 @@
 # Changelog
 
+## <small>0.19.111 (2026-10-21)</small>
+
+* chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.118 ([40c0405](https://github.com/bitsocialnet/bitsocial-cli/commit/40c0405))
+  * pkc-js [0.0.118](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.118) (2026-10-20)
+    * fix(challenges): name unregistered challenges and refuse to start until they load ([#429](https://github.com/pkcprotocol/pkc-js/issues/429)) ([9ddba5a](https://github.com/pkcprotocol/pkc-js/commit/9ddba5a7fb5cf86747fbe19a6e2c482bfa116212)), closes [#428](https://github.com/pkcprotocol/pkc-js/issues/428) [#428](https://github.com/pkcprotocol/pkc-js/issues/428) [#428](https://github.com/pkcprotocol/pkc-js/issues/428)
+  * pkc-js [0.0.117](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.117) (2026-10-20)
+    * fix(rpc): keep RPC subscriptions alive across websocket reconnects ([#425](https://github.com/pkcprotocol/pkc-js/issues/425)) ([#426](https://github.com/pkcprotocol/pkc-js/issues/426)) ([c6ef875](https://github.com/pkcprotocol/pkc-js/commit/c6ef8759f985b3830cca1a57671e8a5bea6c3fc6))
+  * pkc-js [0.0.116](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.116) (2026-10-20)
+    * fix(community): keep a purge and its moderation row when MFS cleanup fails ([#420](https://github.com/pkcprotocol/pkc-js/issues/420)) ([#421](https://github.com/pkcprotocol/pkc-js/issues/421)) ([3db8af3](https://github.com/pkcprotocol/pkc-js/commit/3db8af3a2bda422586e704b41945fe1c257408d8))
+
 ## <small>0.19.110 (2026-10-20)</small>
 
 * test: handle the running community's error event and point the e2e assertions at pkc-js#429 ([af35719](https://github.com/bitsocialnet/bitsocial-cli/commit/af35719)), closes [pkc-js#429](https://github.com/pkc-js/issues/429)
