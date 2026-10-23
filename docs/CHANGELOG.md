@@ -1,5 +1,11 @@
 # Changelog
 
+## <small>0.19.113 (2026-10-23)</small>
+
+* chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.120 ([bbf3b50](https://github.com/bitsocialnet/bitsocial-cli/commit/bbf3b50))
+  * pkc-js [0.0.120](https://github.com/pkcprotocol/pkc-js/releases/tag/v0.0.120) (2026-10-23)
+    * fix(community): apply one identity rule to pages and to name edits ([#401](https://github.com/pkcprotocol/pkc-js/issues/401), [#430](https://github.com/pkcprotocol/pkc-js/issues/430)) ([#414](https://github.com/pkcprotocol/pkc-js/issues/414)) ([c6b6f93](https://github.com/pkcprotocol/pkc-js/commit/c6b6f93219a3d6c4e4d419c462a2e7693c1ef0c2)), closes [#413](https://github.com/pkcprotocol/pkc-js/issues/413)
+
 ## <small>0.19.112 (2026-10-21)</small>
 
 * chore(deps): upgrade @pkcprotocol/pkc-js to 0.0.119 ([f65f3b3](https://github.com/bitsocialnet/bitsocial-cli/commit/f65f3b3))
